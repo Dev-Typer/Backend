@@ -12,10 +12,11 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     config: ConfigService,
   ) {
     super({
-    clientID: config.get<string>('GITHUB_CLIENT_ID')!,
-    clientSecret: config.get<string>('GITHUB_CLIENT_SECRET')!,
-    callbackURL: config.get<string>('GITHUB_CALLBACK_URL')!,
-    scope: ['user:email'],
+        clientID: config.get<string>('GITHUB_CLIENT_ID')!,
+        clientSecret: config.get<string>('GITHUB_CLIENT_SECRET')!,
+        callbackURL: config.get<string>('GITHUB_CALLBACK_URL')!,
+        scope: ['user:email'],
+        state: crypto.randomUUID()
     });
   }
 
