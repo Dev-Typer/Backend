@@ -5,7 +5,7 @@ import { Repository, LessThan } from 'typeorm';
 import { RefreshToken } from './entity/refresh-token.entity';
 
 @Injectable()
-export class TokenCleanupService {
+export class AuthScheduler {
     constructor(
         @InjectRepository(RefreshToken)
         private refreshTokenRepository: Repository<RefreshToken>,
