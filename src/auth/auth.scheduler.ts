@@ -17,9 +17,9 @@ export class AuthScheduler {
     async cleanupExpiredTokens(): Promise<void> {
         try {
             const result = await this.refreshTokenRepository
-                .createQueryBuilder()
+                .createQueryBuilder('rt')
                 .delete()
-                .where('expiresAt < :now OR isRevoked = true', { now: new Date() })
+                .where('rt.expiresAt < :now OR rt.isRevoked = true', { now: new Date() })
                 .execute();
 
             this.logger.log(`refresh token 정리 완료: ${result.affected}건 삭제`);
