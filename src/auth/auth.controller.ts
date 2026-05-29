@@ -1,21 +1,98 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Post, Req, Res, UseGuards, UnauthorizedException } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
+import { AuthService } from './auth.service';
+import { ConfigService } from '@nestjs/config';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { User } from '../user/user.entity';
+import jwtConfig from '../config/jwt.config';
 
 @Controller('/api/auth')
 export class AuthController {
+  constructor(
+    private authService: AuthService,
+    private config: ConfigService,
+
+    @Inject(jwtConfig.KEY)
+    private readonly jwtConf: ConfigType<typeof jwtConfig>,
+  ) {}
+
   @Get('/github')
   @UseGuards(AuthGuard('github'))
   githubLogin(): void {}
 
   @Get('/github/callback')
   @UseGuards(AuthGuard('github'))
-  githubCallback(
+  async githubCallback(
     @Req() req: Request & { user: User },
     @Res() res: Response,
-  ): void {
-    //TODO : 로그인 성공 후 프론트엔드로 리다이렉트하거나 JWT 토큰을 발급하는 로직 구현 예정
-    res.json(req.user);
+  ): Promise<void> {
+    const { accessToken, refreshToken } = await this.authService.issueTokens(req.user);
+    const frontendUrl = this.config.get<string>('FRONTEND_URL')!;
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: this.jwtConf.refreshExpiresSeconds * 1000,
+    });
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: this.jwtConf.accessExpiresSeconds * 1000,
+    });
+
+    res.redirect(frontendUrl);
+  }
+
+  @Post('/refresh')
+  async refresh(
+    @Req() req: Request & { cookies: Record<string, string> },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const token = req.cookies['refreshToken'];
+    if (!token) throw new UnauthorizedException('refresh token 없음');
+
+    const { accessToken, refreshToken: newRefreshToken } = await this.authService.refresh(token);
+
+    const isSecure = process.env.NODE_ENV === 'production';
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'lax',
+      maxAge: this.jwtConf.accessExpiresSeconds * 1000,
+    });
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'lax',
+      maxAge: this.jwtConf.refreshExpiresSeconds * 1000,
+    });
+  }
+
+  @Post('/logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(
+    @Req() req: Request & { cookies: Record<string, string>; user: { userId: number } },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const token = req.cookies['refreshToken'];
+    if (token) await this.authService.logout(token, req.user.userId);
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+    };
+    res.clearCookie('accessToken', cookieOptions);
+    res.clearCookie('refreshToken', cookieOptions);
+  }
+
+  @Get('/me')
+  @UseGuards(JwtAuthGuard)
+  getMe(@Req() req: Request & { user: { userId: number; username: string } }) {
+    return req.user;
   }
 }
