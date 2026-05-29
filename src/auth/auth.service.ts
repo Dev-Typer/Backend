@@ -32,19 +32,20 @@ export class AuthService {
     }
 
     async issueRefreshToken(user: User): Promise<string> {
+        await this.refreshTokenRepository.update(
+            { userId: user.id, isRevoked: false },
+            { isRevoked: true },
+        );
+
         const payload: JwtPayload = { sub: user.id, username: user.username };
         const token = this.jwtService.sign(payload, { expiresIn: '7d' });
 
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);
 
-        const refreshToken = this.refreshTokenRepository.create({
-            token,
-            expiresAt,
-            userId: user.id,
-            isRevoked: false,
-        });
-        await this.refreshTokenRepository.save(refreshToken);
+        await this.refreshTokenRepository.save(
+            this.refreshTokenRepository.create({ token, expiresAt, userId: user.id, isRevoked: false }),
+        );
 
         return token;
     }
