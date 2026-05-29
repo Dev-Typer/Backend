@@ -6,16 +6,17 @@ import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './types/jwt-payload.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RefreshToken } from './entity/refresh-token.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+
 @Injectable()
 export class AuthService {
     constructor(
         private userService: UserService,
         private jwtService: JwtService,
+        private dataSource: DataSource,
 
         @InjectRepository(RefreshToken)
         private refreshTokenRepository: Repository<RefreshToken>,
-            
     ) {}
 
     async findOrCreateUser(profile: GithubProfileDto): Promise<User> {
@@ -32,20 +33,16 @@ export class AuthService {
     }
 
     async issueRefreshToken(user: User): Promise<string> {
-        await this.refreshTokenRepository.update(
-            { userId: user.id, isRevoked: false },
-            { isRevoked: true },
-        );
-
         const payload: JwtPayload = { sub: user.id, username: user.username };
         const token = this.jwtService.sign(payload, { expiresIn: '7d' });
 
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);
 
-        await this.refreshTokenRepository.save(
-            this.refreshTokenRepository.create({ token, expiresAt, userId: user.id, isRevoked: false }),
-        );
+        await this.dataSource.transaction(async (manager) => {
+            await manager.update(RefreshToken, { userId: user.id, isRevoked: false }, { isRevoked: true });
+            await manager.save(RefreshToken, manager.create(RefreshToken, { token, expiresAt, userId: user.id, isRevoked: false }));
+        });
 
         return token;
     }
