@@ -32,12 +32,12 @@ export class AuthService {
         return user;
     }
 
-    issueAccessToken(user: User): string {
+    issueAccessToken(user: Pick<User, 'id' | 'username'>): string {
         const payload: JwtPayload = { sub: user.id, username: user.username };
         return this.jwtService.sign(payload, { expiresIn: this.jwtConf.accessExpiresSeconds });
     }
 
-    async issueRefreshToken(user: User): Promise<string> {
+    async issueRefreshToken(user: Pick<User, 'id' | 'username'>): Promise<string> {
         const payload: JwtPayload = { sub: user.id, username: user.username };
         const token = this.jwtService.sign(payload, { expiresIn: this.jwtConf.refreshExpiresSeconds });
 
@@ -52,7 +52,7 @@ export class AuthService {
         return token;
     }
 
-    async issueTokens(user: User): Promise<{ accessToken: string; refreshToken: string }> {
+    async issueTokens(user: Pick<User, 'id' | 'username'>): Promise<{ accessToken: string; refreshToken: string }> {
         const accessToken = this.issueAccessToken(user);
         const refreshToken = await this.issueRefreshToken(user);
         return { accessToken, refreshToken };
@@ -85,11 +85,6 @@ export class AuthService {
             throw new UnauthorizedException('만료된 refresh token');
         }
 
-        const user = await this.userService.findById(payload.sub);
-        if (!user) {
-            throw new UnauthorizedException('유저를 찾을 수 없음');
-        }
-
-        return this.issueTokens(user);
+        return this.issueTokens({ id: record.userId, username: payload.username });
     }
 }
