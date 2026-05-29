@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
 import { User } from 'src/user/user.entity';
 import { GithubProfileDto } from './dto/github-profile.dto';
@@ -7,6 +8,7 @@ import { JwtPayload } from './types/jwt-payload.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RefreshToken } from './entity/refresh-token.entity';
 import { DataSource, Repository } from 'typeorm';
+import jwtConfig from '../config/jwt.config';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +16,9 @@ export class AuthService {
         private userService: UserService,
         private jwtService: JwtService,
         private dataSource: DataSource,
+
+        @Inject(jwtConfig.KEY)
+        private readonly jwtConf: ConfigType<typeof jwtConfig>,
 
         @InjectRepository(RefreshToken)
         private refreshTokenRepository: Repository<RefreshToken>,
@@ -29,15 +34,15 @@ export class AuthService {
 
     issueAccessToken(user: User): string {
         const payload: JwtPayload = { sub: user.id, username: user.username };
-        return this.jwtService.sign(payload, { expiresIn: '5m' });
+        return this.jwtService.sign(payload, { expiresIn: this.jwtConf.accessExpiresSeconds });
     }
 
     async issueRefreshToken(user: User): Promise<string> {
         const payload: JwtPayload = { sub: user.id, username: user.username };
-        const token = this.jwtService.sign(payload, { expiresIn: '7d' });
+        const token = this.jwtService.sign(payload, { expiresIn: this.jwtConf.refreshExpiresSeconds });
 
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7);
+        expiresAt.setSeconds(expiresAt.getSeconds() + this.jwtConf.refreshExpiresSeconds);
 
         await this.dataSource.transaction(async (manager) => {
             await manager.update(RefreshToken, { userId: user.id, isRevoked: false }, { isRevoked: true });

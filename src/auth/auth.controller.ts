@@ -1,16 +1,21 @@
-import { Controller, Get, Post, Req, Res, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Inject, Post, Req, Res, UseGuards, UnauthorizedException } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { User } from '../user/user.entity';
+import jwtConfig from '../config/jwt.config';
 
 @Controller('/api/auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
     private config: ConfigService,
+
+    @Inject(jwtConfig.KEY)
+    private readonly jwtConf: ConfigType<typeof jwtConfig>,
   ) {}
 
   @Get('/github')
@@ -30,13 +35,13 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: this.jwtConf.refreshExpiresSeconds * 1000,
     });
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 5 * 60 * 1000,
+      maxAge: this.jwtConf.accessExpiresSeconds * 1000,
     });
 
     res.redirect(frontendUrl);
@@ -56,7 +61,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 5 * 60 * 1000,
+      maxAge: this.jwtConf.accessExpiresSeconds * 1000,
     });
   }
 
