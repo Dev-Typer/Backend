@@ -7,33 +7,29 @@ export interface ErrorCode {
 }
 
 export const AuthError = {
-  INVALID_TOKEN: {
+  MISSING_REFRESH_TOKEN: {
     code: 'AUTH_001',
     statusCode: HttpStatus.UNAUTHORIZED,
-    message: '유효하지 않은 토큰입니다',
+    message: 'refresh token이 없습니다',
   },
-  EXPIRED_TOKEN: {
+  INVALID_REFRESH_TOKEN: {
     code: 'AUTH_002',
     statusCode: HttpStatus.UNAUTHORIZED,
-    message: '만료된 토큰입니다',
+    message: '유효하지 않은 refresh token입니다',
   },
-  UNAUTHORIZED: {
+  REVOKED_REFRESH_TOKEN: {
     code: 'AUTH_003',
     statusCode: HttpStatus.UNAUTHORIZED,
-    message: '로그인이 필요합니다',
+    message: '폐기된 refresh token입니다',
+  },
+  EXPIRED_REFRESH_TOKEN: {
+    code: 'AUTH_004',
+    statusCode: HttpStatus.UNAUTHORIZED,
+    message: '만료된 refresh token입니다',
+  },
+  USER_NOT_FOUND: {
+    code: 'AUTH_005',
+    statusCode: HttpStatus.UNAUTHORIZED,
+    message: '존재하지 않는 유저입니다',
   },
 } as const satisfies Record<string, ErrorCode>;
-
-export const UserError = {
-  NOT_FOUND: {
-    code: 'USER_001',
-    statusCode: HttpStatus.NOT_FOUND,
-    message: '유저를 찾을 수 없습니다',
-  },
-  DUPLICATE_USERNAME: {
-    code: 'USER_002',
-    statusCode: HttpStatus.CONFLICT,
-    message: '이미 사용 중인 닉네임입니다',
-  },
-} as const satisfies Record<string, ErrorCode>;
-// 위 모든 내용은 임시입니다 하지만 양식은 동일하게 유지해주세요

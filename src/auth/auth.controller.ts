@@ -1,6 +1,8 @@
-import { Controller, Get, HttpStatus, Inject, Post, Req, Res, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { ApiResponse } from '../common/dto/api-response';
+import { BusinessException } from '../common/exceptions/business.exception';
+import { AuthError } from '../common/exceptions/error-code';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -54,7 +56,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
     const token = req.cookies['refreshToken'];
-    if (!token) throw new UnauthorizedException('refresh token 없음');
+    if (!token) throw new BusinessException(AuthError.MISSING_REFRESH_TOKEN);
 
     const { accessToken, refreshToken: newRefreshToken } = await this.authService.refresh(token);
 
