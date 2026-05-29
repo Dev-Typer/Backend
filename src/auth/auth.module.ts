@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { GithubStrategy } from './strategies/github.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { TokenCleanupService } from './token-cleanup.service';
 import { UserModule } from '../user/user.module';
 import { RefreshToken } from './entity/refresh-token.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -25,6 +26,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, GithubStrategy, JwtStrategy], 
+  providers: [AuthService, GithubStrategy, JwtStrategy, TokenCleanupService],
 })
 export class AuthModule {}
