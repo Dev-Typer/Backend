@@ -25,12 +25,12 @@ export class AuthController {
   ): Promise<void> {
     const { accessToken, refreshToken } = await this.authService.issueTokens(req.user);
     const frontendUrl = this.config.get<string>('FRONTEND_URL')!;
-    
+
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, 
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
@@ -41,7 +41,6 @@ export class AuthController {
 
     res.redirect(frontendUrl);
   }
-
 
   @Post('/refresh')
   async refresh(
@@ -59,6 +58,19 @@ export class AuthController {
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000,
     });
+  }
+
+  @Post('/logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(
+    @Req() req: Request & { cookies: Record<string, string> },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const token = req.cookies['refreshToken'];
+    if (token) await this.authService.logout(token);
+
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
   }
 
   @Get('/me')

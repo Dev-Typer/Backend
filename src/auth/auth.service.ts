@@ -55,6 +55,13 @@ export class AuthService {
         return { accessToken, refreshToken };
     }
 
+    async logout(refreshToken: string): Promise<void> {
+        await this.refreshTokenRepository.update(
+            { token: refreshToken },
+            { isRevoked: true },
+        );
+    }
+
     async refresh(refreshToken: string): Promise<string> {
         let payload: JwtPayload;
         try {
