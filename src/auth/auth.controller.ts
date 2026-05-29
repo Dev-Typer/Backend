@@ -74,8 +74,13 @@ export class AuthController {
     const token = req.cookies['refreshToken'];
     if (token) await this.authService.logout(token, req.user.userId);
 
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+    };
+    res.clearCookie('accessToken', cookieOptions);
+    res.clearCookie('refreshToken', cookieOptions);
   }
 
   @Get('/me')
