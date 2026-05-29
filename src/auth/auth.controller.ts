@@ -36,7 +36,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 5 * 60 * 1000,
     });
 
     res.redirect(frontendUrl);
@@ -56,7 +56,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 5 * 60 * 1000,
     });
   }
 

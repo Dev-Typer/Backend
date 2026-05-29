@@ -28,7 +28,7 @@ export class AuthService {
 
     issueAccessToken(user: User): string {
         const payload: JwtPayload = { sub: user.id, username: user.username };
-        return this.jwtService.sign(payload, { expiresIn: '15m' });
+        return this.jwtService.sign(payload, { expiresIn: '5m' });
     }
 
     async issueRefreshToken(user: User): Promise<string> {
