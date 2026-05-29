@@ -1,5 +1,6 @@
-import { Controller, Get, Inject, Post, Req, Res, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Inject, Post, Req, Res, UseGuards, UnauthorizedException } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import { ApiResponse } from '../common/dto/api-response';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -92,7 +93,7 @@ export class AuthController {
 
   @Get('/me')
   @UseGuards(JwtAuthGuard)
-  getMe(@Req() req: Request & { user: { userId: number; username: string } }) {
-    return req.user;
+  getMe(@Req() req: Request & { user: { userId: number; username: string } }): ApiResponse<{ userId: number; username: string }> {
+    return ApiResponse.success(req.user, HttpStatus.OK);
   }
 }
