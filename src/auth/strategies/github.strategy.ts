@@ -4,6 +4,7 @@ import { Strategy } from 'passport-github2';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
 import { User } from '../../user/user.entity';
+import { UUIDStateStore } from './uuid-state-store';
 
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
@@ -16,8 +17,8 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         clientSecret: config.get<string>('GITHUB_CLIENT_SECRET')!,
         callbackURL: config.get<string>('GITHUB_CALLBACK_URL')!,
         scope: ['user:email'],
-        state: crypto.randomUUID()
-    });
+        store: new UUIDStateStore(),
+    } as any);
   }
 
   async validate(
