@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { JwtPayload } from '../types/jwt-payload.interface';
 import { UserService } from '../../user/user.service';
+import { BusinessException } from '../../common/exceptions/business.exception';
+import { AuthError } from '../../common/exceptions/error-code';
 import type { Request } from 'express';
 
 @Injectable()
@@ -22,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     async validate(payload: JwtPayload) {
         const user = await this.userService.findById(payload.sub);
-        if (!user) throw new UnauthorizedException('존재하지 않는 유저');
+        if (!user) throw new BusinessException(AuthError.USER_NOT_FOUND);
         return { userId: user.id, username: user.username };
     }
 }

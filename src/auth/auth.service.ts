@@ -1,5 +1,7 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import { BusinessException } from '../common/exceptions/business.exception';
+import { AuthError } from '../common/exceptions/error-code';
 import { UserService } from 'src/user/user.service';
 import { User } from 'src/user/user.entity';
 import { GithubProfileDto } from './dto/github-profile.dto';
@@ -70,7 +72,7 @@ export class AuthService {
         try {
             payload = this.jwtService.verify<JwtPayload>(refreshToken);
         } catch {
-            throw new UnauthorizedException('유효하지 않은 refresh token');
+            throw new BusinessException(AuthError.INVALID_REFRESH_TOKEN);
         }
 
         const record = await this.refreshTokenRepository.findOne({
@@ -78,11 +80,11 @@ export class AuthService {
         });
 
         if (!record) {
-            throw new UnauthorizedException('존재하지 않거나 폐기된 refresh token');
+            throw new BusinessException(AuthError.REVOKED_REFRESH_TOKEN);
         }
 
         if (record.expiresAt < new Date()) {
-            throw new UnauthorizedException('만료된 refresh token');
+            throw new BusinessException(AuthError.EXPIRED_REFRESH_TOKEN);
         }
 
         return this.issueTokens({ id: record.userId, username: payload.username });
