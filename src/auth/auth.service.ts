@@ -56,9 +56,9 @@ export class AuthService {
         return { accessToken, refreshToken };
     }
 
-    async logout(refreshToken: string): Promise<void> {
+    async logout(refreshToken: string, userId: number): Promise<void> {
         await this.refreshTokenRepository.update(
-            { token: refreshToken },
+            { token: refreshToken, userId },
             { isRevoked: true },
         );
     }
