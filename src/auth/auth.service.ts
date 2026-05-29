@@ -65,7 +65,7 @@ export class AuthService {
         );
     }
 
-    async refresh(refreshToken: string): Promise<string> {
+    async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
         let payload: JwtPayload;
         try {
             payload = this.jwtService.verify<JwtPayload>(refreshToken);
@@ -90,6 +90,6 @@ export class AuthService {
             throw new UnauthorizedException('유저를 찾을 수 없음');
         }
 
-        return this.issueAccessToken(user);
+        return this.issueTokens(user);
     }
 }

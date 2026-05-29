@@ -55,13 +55,20 @@ export class AuthController {
     const token = req.cookies['refreshToken'];
     if (!token) throw new UnauthorizedException('refresh token 없음');
 
-    const accessToken = await this.authService.refresh(token);
+    const { accessToken, refreshToken: newRefreshToken } = await this.authService.refresh(token);
 
+    const isSecure = process.env.NODE_ENV === 'production';
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: this.jwtConf.accessExpiresSeconds * 1000,
+    });
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'lax',
+      maxAge: this.jwtConf.refreshExpiresSeconds * 1000,
     });
   }
 
