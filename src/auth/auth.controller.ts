@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -42,6 +42,24 @@ export class AuthController {
     res.redirect(frontendUrl);
   }
 
+
+  @Post('/refresh')
+  async refresh(
+    @Req() req: Request & { cookies: Record<string, string> },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const token = req.cookies['refreshToken'];
+    if (!token) throw new UnauthorizedException('refresh token 없음');
+
+    const accessToken = await this.authService.refresh(token);
+
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000,
+    });
+  }
 
   @Get('/me')
   @UseGuards(JwtAuthGuard)

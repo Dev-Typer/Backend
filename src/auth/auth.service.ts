@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import { User } from 'src/user/user.entity';
 import { GithubProfileDto } from './dto/github-profile.dto';
@@ -53,5 +53,33 @@ export class AuthService {
         const accessToken = this.issueAccessToken(user);
         const refreshToken = await this.issueRefreshToken(user);
         return { accessToken, refreshToken };
+    }
+
+    async refresh(refreshToken: string): Promise<string> {
+        let payload: JwtPayload;
+        try {
+            payload = this.jwtService.verify<JwtPayload>(refreshToken);
+        } catch {
+            throw new UnauthorizedException('유효하지 않은 refresh token');
+        }
+
+        const record = await this.refreshTokenRepository.findOne({
+            where: { token: refreshToken, isRevoked: false },
+        });
+
+        if (!record) {
+            throw new UnauthorizedException('존재하지 않거나 폐기된 refresh token');
+        }
+
+        if (record.expiresAt < new Date()) {
+            throw new UnauthorizedException('만료된 refresh token');
+        }
+
+        const user = await this.userService.findById(payload.sub);
+        if (!user) {
+            throw new UnauthorizedException('유저를 찾을 수 없음');
+        }
+
+        return this.issueAccessToken(user);
     }
 }
