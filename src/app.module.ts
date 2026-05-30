@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './auth/auth.module';
+import { SnippetModule } from './snippet/snippet.module';
 import jwtConfig from './config/jwt.config';
 
 @Module({
@@ -29,6 +30,7 @@ import jwtConfig from './config/jwt.config';
     }),
     ScheduleModule.forRoot(),
     AuthModule,
+    SnippetModule,
   ],
 })
 export class AppModule {}
