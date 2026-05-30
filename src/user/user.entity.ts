@@ -4,6 +4,7 @@ import {
     Column,
     CreateDateColumn,
 } from 'typeorm';
+import { UserRole } from './enums/user-role.enum';
 
 @Entity()
 export class User {
@@ -23,7 +24,10 @@ export class User {
     rating!: number;
 
     @Column({ default: 0 })
-    tier!: string; //추후 enum으로 관리할 예정입니다 (아직 티어 기준 미정)
+    tier!: string;
+
+    @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+    role!: UserRole;
 
     @CreateDateColumn()
     createdAt!: Date;
