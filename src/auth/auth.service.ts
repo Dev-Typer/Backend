@@ -68,9 +68,8 @@ export class AuthService {
     }
 
     async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
-        let payload: JwtPayload;
         try {
-            payload = this.jwtService.verify<JwtPayload>(refreshToken);
+            this.jwtService.verify<JwtPayload>(refreshToken);
         } catch {
             throw new BusinessException(AuthError.INVALID_REFRESH_TOKEN);
         }
@@ -87,6 +86,9 @@ export class AuthService {
             throw new BusinessException(AuthError.EXPIRED_REFRESH_TOKEN);
         }
 
-        return this.issueTokens({ id: record.userId, username: payload.username, role: payload.role });
+        const user = await this.userService.findById(record.userId);
+        if (!user) throw new BusinessException(AuthError.USER_NOT_FOUND);
+
+        return this.issueTokens(user);
     }
 }
