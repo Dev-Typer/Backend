@@ -3,11 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Snippet } from './snippet.entity';
 import { SnippetService } from './snippet.service';
 import { SnippetController } from './snippet.controller';
+import { SnippetAdminService } from './snippet.admin.service';
+import { SnippetAdminController } from './snippet.admin.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Snippet])],
-  controllers: [SnippetController],
-  providers: [SnippetService],
-  exports: [TypeOrmModule, SnippetService],
+  controllers: [SnippetController, SnippetAdminController],
+  providers: [SnippetService, SnippetAdminService],
+  exports: [TypeOrmModule, SnippetService, SnippetAdminService],
 })
 export class SnippetModule {}

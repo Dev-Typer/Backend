@@ -1,63 +1,29 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Query } from '@nestjs/common';
 import { SnippetService } from './snippet.service';
-import { CreateSnippetDto } from './dto/create-snippet.dto';
-import { UpdateSnippetDto } from './dto/update-snippet.dto';
-import { SnippetQueryDto } from './dto/snippet-query.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RoleGuard } from '../common/guards/role.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../user/enums/user-role.enum';
 import { ApiResponse } from '../common/dto/api-response';
+import { SnippetLanguage } from './enums/snippet-language.enum';
+import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
 
-// 모든 엔드포인트: ADMIN Role 필요 (미인증 401, 권한 없음 403)
-@Controller('/api/admin/snippets')
-@UseGuards(JwtAuthGuard, RoleGuard)
-@Roles(UserRole.ADMIN)
+@Controller('/api/snippets')
 export class SnippetController {
   constructor(private readonly snippetService: SnippetService) {}
 
-  // POST /api/admin/snippets
-  // 스니펫 등록. title, language, difficulty, content 필수 / source 선택
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateSnippetDto) {
-    const snippet = await this.snippetService.create(dto);
-    return ApiResponse.success(snippet, HttpStatus.CREATED);
-  }
-
-  // GET /api/admin/snippets?language=&difficulty=&isActive=&page=&limit=
-  // 스니펫 목록 조회. 언어/난이도/활성화 여부 필터, 페이지네이션 지원
-  @Get()
-  async findAll(@Query() query: SnippetQueryDto) {
-    const result = await this.snippetService.findAll(query);
-    return ApiResponse.success(result, HttpStatus.OK);
-  }
-
-  // GET /api/admin/snippets/:id
-  // 스니펫 단건 조회. 비활성화된 스니펫도 조회 가능
-  @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    const snippet = await this.snippetService.findById(id);
-    return ApiResponse.success(snippet, HttpStatus.OK);
-  }
-
-  // PATCH /api/admin/snippets/:id
-  // 스니펫 부분 수정. 전달된 필드만 업데이트 (undefined 필드는 무시)
-  @Patch(':id')
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateSnippetDto,
+  // GET /api/snippets/random?language=&difficulty=
+  // 솔로 연습용 랜덤 스니펫 조회. 인증 불필요
+  @Get('random')
+  async findRandom(
+    @Query('language') language?: SnippetLanguage,
+    @Query('difficulty') difficulty?: SnippetDifficulty,
   ) {
-    const snippet = await this.snippetService.update(id, dto);
+    const snippet = await this.snippetService.findRandom(language, difficulty);
     return ApiResponse.success(snippet, HttpStatus.OK);
   }
 
-  // DELETE /api/admin/snippets/:id
-  // 스니펫 비활성화 (소프트 삭제). isActive: false 처리, DB에서 삭제하지 않음
-  // 이미 비활성화된 경우 변경 없이 200 반환
-  @Delete(':id')
-  async deactivate(@Param('id', ParseIntPipe) id: number) {
-    await this.snippetService.deactivate(id);
-    return ApiResponse.success(null, HttpStatus.OK);
+  // GET /api/snippets/daily
+  // 오늘의 데일리 챌린지 스니펫 조회. 인증 불필요
+  @Get('daily')
+  async findDaily() {
+    const snippet = await this.snippetService.findDaily();
+    return ApiResponse.success(snippet, HttpStatus.OK);
   }
 }
