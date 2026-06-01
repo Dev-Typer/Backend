@@ -68,4 +68,14 @@ export const ResultError = {
     statusCode: HttpStatus.BAD_REQUEST,
     message: 'wpm이 비정상적으로 높습니다',
   },
+  NOT_FOUND: {
+    code: 'RESULT_005',
+    statusCode: HttpStatus.NOT_FOUND,
+    message: '존재하지 않는 결과입니다',
+  },
+  FORBIDDEN: {
+    code: 'RESULT_006',
+    statusCode: HttpStatus.FORBIDDEN,
+    message: '접근 권한이 없습니다',
+  },
 } as const satisfies Record<string, ErrorCode>;

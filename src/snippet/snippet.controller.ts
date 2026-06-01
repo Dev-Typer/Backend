@@ -2,6 +2,7 @@ import { Controller, Get, HttpStatus, Param, ParseIntPipe, Query } from '@nestjs
 import { SnippetService } from './snippet.service';
 import { SnippetQueryDto, RandomSnippetQueryDto } from './dto/snippet-query.dto';
 import { SnippetResponseDto } from './dto/snippet-response.dto';
+import { SnippetRankingResponseDto } from './dto/snippet-ranking-response.dto';
 import { ApiResponse } from '../common/dto/api-response';
 
 @Controller('/api/snippets')
@@ -39,5 +40,13 @@ export class SnippetController {
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<SnippetResponseDto>> {
     const snippet = await this.snippetService.findOne(id);
     return ApiResponse.success(snippet, HttpStatus.OK);
+  }
+
+  // GET /api/snippets/:id/ranking
+  // 스니펫 랭킹 조회. 인증 불필요 — 유저별 최고 기록 기준 상위 50위
+  @Get(':id/ranking')
+  async findRanking(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<SnippetRankingResponseDto>> {
+    const result = await this.snippetService.findRanking(id);
+    return ApiResponse.success(result, HttpStatus.OK);
   }
 }
