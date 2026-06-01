@@ -13,11 +13,6 @@ export class SnippetQueryDto {
   difficulty?: SnippetDifficulty;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)
-  @IsBoolean()
-  isActive?: boolean;
-
-  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -27,6 +22,14 @@ export class SnippetQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  limit?: number = 20;
+  @Max(50)
+  size?: number = 10;
+}
+
+// 어드민 목록 조회용 — isActive 필터 포함
+export class AdminSnippetQueryDto extends SnippetQueryDto {
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  isActive?: boolean;
 }

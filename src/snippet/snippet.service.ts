@@ -2,18 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Snippet } from './snippet.entity';
-import { SnippetResponseDto } from './dto/snippet-response.dto';
 import { SnippetQueryDto } from './dto/snippet-query.dto';
+import { SnippetResponseDto } from './dto/snippet-response.dto';
 import { SnippetLanguage } from './enums/snippet-language.enum';
 import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { SnippetError } from '../common/exceptions/error-code';
 
-export interface SnippetPage {
-    items: SnippetResponseDto[];
+export interface SnippetListResponse {
+    data: SnippetResponseDto[];
     total: number;
-    page: number;
-    limit: number;
 }
 
 @Injectable()
@@ -24,8 +22,8 @@ export class SnippetService {
     ) {}
 
     // 활성화된 스니펫 목록 조회 — isActive: true 고정
-    async findAll(query: SnippetQueryDto): Promise<SnippetPage> {
-        const { language, difficulty, page = 1, limit = 20 } = query;
+    async findAll(query: SnippetQueryDto): Promise<SnippetListResponse> {
+        const { language, difficulty, page = 1, size = 10 } = query;
 
         const qb = this.snippetRepository
             .createQueryBuilder('snippet')
@@ -36,14 +34,23 @@ export class SnippetService {
         if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
 
         const [items, total] = await qb
-            .skip((page - 1) * limit)
-            .take(limit)
+            .skip((page - 1) * size)
+            .take(size)
             .getManyAndCount();
 
-        return { items: items.map(SnippetResponseDto.from), total, page, limit };
+        return { data: items.map(SnippetResponseDto.from), total };
     }
 
-    // 솔로 연습용 — 활성화된 스니펫 중 언어/난이도 필터로 랜덤 1개 반환
+    // 단건 조회 — 활성화된 스니펫만 반환
+    async findOne(id: number): Promise<SnippetResponseDto> {
+        const snippet = await this.snippetRepository.findOne({
+            where: { id, isActive: true },
+        });
+        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+        return SnippetResponseDto.from(snippet);
+    }
+
+    // 솔로 연습용 — 활성화된 스니펫 중 랜덤 1개 반환
     async findRandom(language?: SnippetLanguage, difficulty?: SnippetDifficulty): Promise<SnippetResponseDto> {
         const qb = this.snippetRepository
             .createQueryBuilder('snippet')
