@@ -28,14 +28,15 @@ export class SnippetService {
     }
 
     async findAll(query: SnippetQueryDto): Promise<SnippetPage> {
-        const { language, difficulty, page = 1, limit = 20 } = query;
+        const { language, difficulty, isActive, page = 1, limit = 20 } = query;
 
         const qb = this.snippetRepository
             .createQueryBuilder('snippet')
             .orderBy('snippet.createdAt', 'DESC');
 
-        if (language)   qb.andWhere('snippet.language = :language', { language });
-        if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
+        if (language)              qb.andWhere('snippet.language = :language', { language });
+        if (difficulty)            qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
+        if (isActive !== undefined) qb.andWhere('snippet.isActive = :isActive', { isActive });
 
         const [items, total] = await qb
             .skip((page - 1) * limit)
