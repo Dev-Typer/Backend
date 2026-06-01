@@ -63,6 +63,7 @@ export class SnippetService {
 
     async deactivate(id: number): Promise<void> {
         const snippet = await this.findById(id);
+        if (!snippet.isActive) return;
         snippet.isActive = false;
         await this.snippetRepository.save(snippet);
     }
