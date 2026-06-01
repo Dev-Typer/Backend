@@ -33,3 +33,11 @@ export const AuthError = {
     message: '존재하지 않는 유저입니다',
   },
 } as const satisfies Record<string, ErrorCode>;
+
+export const SnippetError = {
+  NOT_FOUND: {
+    code: 'SNIPPET_001',
+    statusCode: HttpStatus.NOT_FOUND,
+    message: '존재하지 않는 스니펫입니다',
+  },
+} as const satisfies Record<string, ErrorCode>;
