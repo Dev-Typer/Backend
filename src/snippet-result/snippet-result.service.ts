@@ -1,15 +1,67 @@
-// src/snippet-result/snippet-result.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { SnippetResult } from './entities/snippet-result.entity';
+import { Snippet } from '../snippet/snippet.entity';
+import { SaveSnippetResultDto } from './dto/save-snippet-result.dto';
+import { SnippetResultResponseDto } from './dto/snippet-result-response.dto';
+import { BusinessException } from '../common/exceptions/business.exception';
+import { SnippetError } from '../common/exceptions/error-code';
 
 @Injectable()
 export class SnippetResultService {
   constructor(
     @InjectRepository(SnippetResult)
     private snippetResultRepository: Repository<SnippetResult>,
+    @InjectRepository(Snippet)
+    private snippetRepository: Repository<Snippet>,
+    private dataSource: DataSource,
   ) {}
 
-  // TODO : #17에서 채울 예정
+  async save(
+    dto: SaveSnippetResultDto,
+    userId: number | null,
+  ): Promise<SnippetResultResponseDto | null> {
+    const snippet = await this.snippetRepository.findOne({
+      where: { id: dto.snippetId },
+    });
+
+    if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+    if (!snippet.isActive) throw new BusinessException(SnippetError.INACTIVE);
+
+    // 비로그인 → 저장 스킵
+    if (!userId) return null;
+
+    const result = await this.dataSource.transaction(async (manager) => {
+      // 결과 저장
+      const saved = await manager.save(
+        SnippetResult,
+        manager.create(SnippetResult, {
+          userId,
+          snippetId: dto.snippetId,
+          wpm: dto.wpm,
+          rawWpm: dto.rawWpm,
+          accuracy: dto.accuracy,
+          durationSec: dto.durationSec,
+          typos: dto.typos ?? [],
+          replayData: dto.replayData ?? [],
+        }),
+      );
+
+      // avgWpm / playCount 원자 업데이트 — 동시 요청 race condition 방지
+      await manager
+        .createQueryBuilder()
+        .update(Snippet)
+        .set({
+          playCount: () => 'play_count + 1',
+          avgWpm: () => `ROUND(((avg_wpm * play_count) + ${dto.wpm}) / (play_count + 1), 1)`,
+        })
+        .where('id = :id', { id: dto.snippetId })
+        .execute();
+
+      return saved;
+    });
+
+    return SnippetResultResponseDto.from(result);
+  }
 }
