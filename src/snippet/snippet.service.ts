@@ -3,10 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Snippet } from './snippet.entity';
 import { SnippetResponseDto } from './dto/snippet-response.dto';
+import { SnippetQueryDto } from './dto/snippet-query.dto';
 import { SnippetLanguage } from './enums/snippet-language.enum';
 import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { SnippetError } from '../common/exceptions/error-code';
+
+export interface SnippetPage {
+    items: SnippetResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+}
 
 @Injectable()
 export class SnippetService {
@@ -14,6 +22,26 @@ export class SnippetService {
         @InjectRepository(Snippet)
         private snippetRepository: Repository<Snippet>,
     ) {}
+
+    // 활성화된 스니펫 목록 조회 — isActive: true 고정
+    async findAll(query: SnippetQueryDto): Promise<SnippetPage> {
+        const { language, difficulty, page = 1, limit = 20 } = query;
+
+        const qb = this.snippetRepository
+            .createQueryBuilder('snippet')
+            .where('snippet.isActive = true')
+            .orderBy('snippet.createdAt', 'DESC');
+
+        if (language)   qb.andWhere('snippet.language = :language', { language });
+        if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
+
+        const [items, total] = await qb
+            .skip((page - 1) * limit)
+            .take(limit)
+            .getManyAndCount();
+
+        return { items: items.map(SnippetResponseDto.from), total, page, limit };
+    }
 
     // 솔로 연습용 — 활성화된 스니펫 중 언어/난이도 필터로 랜덤 1개 반환
     async findRandom(language?: SnippetLanguage, difficulty?: SnippetDifficulty): Promise<SnippetResponseDto> {

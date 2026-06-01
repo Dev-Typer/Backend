@@ -1,5 +1,6 @@
 import { Controller, Get, HttpStatus, Query } from '@nestjs/common';
 import { SnippetService } from './snippet.service';
+import { SnippetQueryDto } from './dto/snippet-query.dto';
 import { ApiResponse } from '../common/dto/api-response';
 import { SnippetLanguage } from './enums/snippet-language.enum';
 import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
@@ -7,6 +8,14 @@ import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
 @Controller('/api/snippets')
 export class SnippetController {
   constructor(private readonly snippetService: SnippetService) {}
+
+  // GET /api/snippets?language=&difficulty=&page=&limit=
+  // 활성화된 스니펫 목록 조회. 인증 불필요 (isActive: true 고정)
+  @Get()
+  async findAll(@Query() query: SnippetQueryDto) {
+    const result = await this.snippetService.findAll(query);
+    return ApiResponse.success(result, HttpStatus.OK);
+  }
 
   // GET /api/snippets/random?language=&difficulty=
   // 솔로 연습용 랜덤 스니펫 조회. 인증 불필요
