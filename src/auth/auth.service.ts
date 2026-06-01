@@ -34,13 +34,13 @@ export class AuthService {
         return user;
     }
 
-    issueAccessToken(user: Pick<User, 'id' | 'username'>): string {
-        const payload: JwtPayload = { sub: user.id, username: user.username };
+    issueAccessToken(user: Pick<User, 'id' | 'username' | 'role'>): string {
+        const payload: JwtPayload = { sub: user.id, username: user.username, role: user.role };
         return this.jwtService.sign(payload, { expiresIn: this.jwtConf.accessExpiresSeconds });
     }
 
-    async issueRefreshToken(user: Pick<User, 'id' | 'username'>): Promise<string> {
-        const payload: JwtPayload = { sub: user.id, username: user.username };
+    async issueRefreshToken(user: Pick<User, 'id' | 'username' | 'role'>): Promise<string> {
+        const payload: JwtPayload = { sub: user.id, username: user.username, role: user.role };
         const token = this.jwtService.sign(payload, { expiresIn: this.jwtConf.refreshExpiresSeconds });
 
         const expiresAt = new Date();
@@ -54,7 +54,7 @@ export class AuthService {
         return token;
     }
 
-    async issueTokens(user: Pick<User, 'id' | 'username'>): Promise<{ accessToken: string; refreshToken: string }> {
+    async issueTokens(user: Pick<User, 'id' | 'username' | 'role'>): Promise<{ accessToken: string; refreshToken: string }> {
         const accessToken = this.issueAccessToken(user);
         const refreshToken = await this.issueRefreshToken(user);
         return { accessToken, refreshToken };
@@ -68,9 +68,8 @@ export class AuthService {
     }
 
     async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
-        let payload: JwtPayload;
         try {
-            payload = this.jwtService.verify<JwtPayload>(refreshToken);
+            this.jwtService.verify<JwtPayload>(refreshToken);
         } catch {
             throw new BusinessException(AuthError.INVALID_REFRESH_TOKEN);
         }
@@ -87,6 +86,9 @@ export class AuthService {
             throw new BusinessException(AuthError.EXPIRED_REFRESH_TOKEN);
         }
 
-        return this.issueTokens({ id: record.userId, username: payload.username });
+        const user = await this.userService.findById(record.userId);
+        if (!user) throw new BusinessException(AuthError.USER_NOT_FOUND);
+
+        return this.issueTokens(user);
     }
 }
