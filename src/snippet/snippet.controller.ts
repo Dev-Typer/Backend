@@ -1,10 +1,8 @@
 import { Controller, Get, HttpStatus, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { SnippetService } from './snippet.service';
-import { SnippetQueryDto } from './dto/snippet-query.dto';
+import { SnippetQueryDto, RandomSnippetQueryDto } from './dto/snippet-query.dto';
 import { SnippetResponseDto } from './dto/snippet-response.dto';
 import { ApiResponse } from '../common/dto/api-response';
-import { SnippetLanguage } from './enums/snippet-language.enum';
-import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
 
 @Controller('/api/snippets')
 export class SnippetController {
@@ -13,7 +11,7 @@ export class SnippetController {
   // GET /api/snippets?language=&difficulty=&page=&size=
   // 활성 스니펫 목록 조회. 인증 불필요 (isActive: true 고정)
   @Get()
-  async findAll(@Query() query: SnippetQueryDto): Promise<ApiResponse<{ data: SnippetResponseDto[]; total: number }>> {
+  async findAll(@Query() query: SnippetQueryDto): Promise<ApiResponse<{ data: SnippetResponseDto[]; total: number; page: number; size: number }>> {
     const result = await this.snippetService.findAll(query);
     return ApiResponse.success(result, HttpStatus.OK);
   }
@@ -22,11 +20,8 @@ export class SnippetController {
   // 솔로 연습용 랜덤 스니펫 조회. 인증 불필요
   // ⚠️ /random 은 /:id 보다 반드시 위에 있어야 함
   @Get('random')
-  async findRandom(
-    @Query('language') language?: SnippetLanguage,
-    @Query('difficulty') difficulty?: SnippetDifficulty,
-  ): Promise<ApiResponse<SnippetResponseDto>> {
-    const snippet = await this.snippetService.findRandom(language, difficulty);
+  async findRandom(@Query() query: RandomSnippetQueryDto): Promise<ApiResponse<SnippetResponseDto>> {
+    const snippet = await this.snippetService.findRandom(query.language, query.difficulty);
     return ApiResponse.success(snippet, HttpStatus.OK);
   }
 

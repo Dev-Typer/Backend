@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Snippet } from './snippet.entity';
 import { CreateSnippetDto } from './dto/create-snippet.dto';
 import { UpdateSnippetDto } from './dto/update-snippet.dto';
@@ -13,6 +13,7 @@ export class SnippetAdminService {
     constructor(
         @InjectRepository(Snippet)
         private snippetRepository: Repository<Snippet>,
+        private dataSource: DataSource,
     ) {}
 
     async create(dto: CreateSnippetDto): Promise<SnippetResponseDto> {
@@ -31,11 +32,20 @@ export class SnippetAdminService {
     async update(id: number, dto: UpdateSnippetDto): Promise<SnippetResponseDto> {
         const snippet = await this.snippetRepository.findOne({ where: { id } });
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+
         const changes = Object.fromEntries(
             Object.entries(dto).filter(([, v]) => v !== undefined),
         );
-        Object.assign(snippet, changes);
-        const saved = await this.snippetRepository.save(snippet);
+
+        const saved = await this.dataSource.transaction(async (manager) => {
+            // isDaily: true로 변경 시 기존 daily 스니펫 해제
+            if (changes.isDaily === true) {
+                await manager.update(Snippet, { isDaily: true }, { isDaily: false });
+            }
+            Object.assign(snippet, changes);
+            return manager.save(Snippet, snippet);
+        });
+
         return SnippetResponseDto.from(saved);
     }
 

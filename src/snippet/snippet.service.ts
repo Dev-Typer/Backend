@@ -12,6 +12,8 @@ import { SnippetError } from '../common/exceptions/error-code';
 export interface SnippetListResponse {
     data: SnippetResponseDto[];
     total: number;
+    page: number;
+    size: number;
 }
 
 @Injectable()
@@ -38,7 +40,7 @@ export class SnippetService {
             .take(size)
             .getManyAndCount();
 
-        return { data: items.map(SnippetResponseDto.from), total };
+        return { data: items.map(SnippetResponseDto.from), total, page, size };
     }
 
     // 단건 조회 — 활성화된 스니펫만 반환
@@ -65,10 +67,11 @@ export class SnippetService {
         return SnippetResponseDto.from(snippet);
     }
 
-    // 데일리 챌린지용 — isDaily=true인 활성 스니펫 1개 반환
+    // 데일리 챌린지용 — isDaily=true인 활성 스니펫 1개 반환 (최신순)
     async findDaily(): Promise<SnippetResponseDto> {
         const snippet = await this.snippetRepository.findOne({
             where: { isDaily: true, isActive: true },
+            order: { createdAt: 'DESC' },
         });
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
         return SnippetResponseDto.from(snippet);
