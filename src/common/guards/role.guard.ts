@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../../user/enums/user-role.enum';
 import { ROLES_KEY } from '../decorators/roles.decorator';
@@ -19,6 +19,9 @@ export class RoleGuard implements CanActivate {
 
     if (!user) throw new UnauthorizedException('인증이 필요합니다');
 
-    return requiredRoles.includes(user.role);
+    if (!requiredRoles.includes(user.role)) {
+      throw new ForbiddenException('접근 권한이 없습니다');
+    }
+    return true;
   }
 }

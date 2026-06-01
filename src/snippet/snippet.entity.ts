@@ -25,7 +25,7 @@ export class Snippet {
   content!: string;
 
   @Column({ nullable: true })
-  source!: string;
+  source!: string | null;
 
   @Column({ type: 'float', default: 0 })
   avgWpm!: number;
