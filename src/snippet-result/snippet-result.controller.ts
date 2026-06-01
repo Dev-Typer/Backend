@@ -1,5 +1,5 @@
-import { Body, Controller, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { SnippetResultService } from './snippet-result.service';
 import { SaveSnippetResultDto } from './dto/save-snippet-result.dto';
 import { SnippetResultResponseDto } from './dto/snippet-result-response.dto';
@@ -16,15 +16,18 @@ export class SnippetResultController {
   @UseGuards(OptionalJwtGuard)
   async save(
     @Req() req: Request & { user?: { userId: number } },
+    @Res({ passthrough: true }) res: Response,
     @Body() dto: SaveSnippetResultDto,
   ): Promise<ApiResponse<SnippetResultResponseDto | null>> {
     const userId = req.user?.userId ?? null;
     const result = await this.snippetResultService.save(dto, userId);
 
     if (!result) {
+      res.status(HttpStatus.OK);
       return new ApiResponse(true, HttpStatus.OK, null, '비로그인 상태로 결과가 저장되지 않았습니다');
     }
 
+    res.status(HttpStatus.CREATED);
     return ApiResponse.success(result, HttpStatus.CREATED);
   }
 }
