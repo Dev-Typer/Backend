@@ -53,7 +53,10 @@ export class SnippetService {
 
     async update(id: number, dto: UpdateSnippetDto): Promise<Snippet> {
         const snippet = await this.findById(id);
-        Object.assign(snippet, dto);
+        const changes = Object.fromEntries(
+            Object.entries(dto).filter(([, v]) => v !== undefined),
+        );
+        Object.assign(snippet, changes);
         return this.snippetRepository.save(snippet);
     }
 
