@@ -54,14 +54,16 @@ export class SnippetResultService {
         }),
       );
 
-      // avgWpm / playCount 업데이트
-      const newPlayCount = snippet.playCount + 1;
-      const newAvgWpm = ((snippet.avgWpm * snippet.playCount) + dto.wpm) / newPlayCount;
-
-      await manager.update(Snippet, dto.snippetId, {
-        playCount: newPlayCount,
-        avgWpm: Math.round(newAvgWpm * 10) / 10,
-      });
+      // avgWpm / playCount 원자 업데이트 — 동시 요청 race condition 방지
+      await manager
+        .createQueryBuilder()
+        .update(Snippet)
+        .set({
+          playCount: () => 'play_count + 1',
+          avgWpm: () => `ROUND(((avg_wpm * play_count) + ${dto.wpm}) / (play_count + 1), 1)`,
+        })
+        .where('id = :id', { id: dto.snippetId })
+        .execute();
 
       return saved;
     });
