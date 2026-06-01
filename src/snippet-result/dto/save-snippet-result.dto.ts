@@ -14,10 +14,6 @@ class TypoDataDto implements TypoData {
   @IsString()
   @MaxLength(10)
   typed!: string;
-
-  @IsString()
-  @MaxLength(50)
-  word!: string;
 }
 
 class ReplayEventDto implements ReplayEvent {
