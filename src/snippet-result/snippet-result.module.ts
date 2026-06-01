@@ -4,12 +4,14 @@ import { SnippetResult } from './entities/snippet-result.entity';
 import { Snippet } from '../snippet/snippet.entity';
 import { SnippetModule } from '../snippet/snippet.module';
 import { SnippetResultService } from './snippet-result.service';
+import { SnippetResultController } from './snippet-result.controller';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([SnippetResult, Snippet]),
         SnippetModule,
     ],
+    controllers: [SnippetResultController],
     providers: [SnippetResultService],
     exports: [SnippetResultService],
 })
