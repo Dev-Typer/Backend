@@ -2,17 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Snippet } from './snippet.entity';
-import { CreateSnippetDto } from './dto/create-snippet.dto';
-import { UpdateSnippetDto } from './dto/update-snippet.dto';
 import { SnippetQueryDto } from './dto/snippet-query.dto';
+import { SnippetResponseDto } from './dto/snippet-response.dto';
+import { SnippetLanguage } from './enums/snippet-language.enum';
+import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { SnippetError } from '../common/exceptions/error-code';
 
-export interface SnippetPage {
-  items: Snippet[];
-  total: number;
-  page: number;
-  limit: number;
+export interface SnippetListResponse {
+    data: SnippetResponseDto[];
+    total: number;
+    page: number;
+    size: number;
 }
 
 @Injectable()
@@ -22,49 +23,57 @@ export class SnippetService {
         private snippetRepository: Repository<Snippet>,
     ) {}
 
-    async create(dto: CreateSnippetDto): Promise<Snippet> {
-        const snippet = this.snippetRepository.create(dto);
-        return this.snippetRepository.save(snippet);
-    }
-
-    async findAll(query: SnippetQueryDto): Promise<SnippetPage> {
-        const { language, difficulty, isActive, page = 1, limit = 20 } = query;
+    // 활성화된 스니펫 목록 조회 — isActive: true 고정
+    async findAll(query: SnippetQueryDto): Promise<SnippetListResponse> {
+        const { language, difficulty, page = 1, size = 10 } = query;
 
         const qb = this.snippetRepository
             .createQueryBuilder('snippet')
+            .where('snippet.isActive = true')
             .orderBy('snippet.createdAt', 'DESC');
 
-        if (language)              qb.andWhere('snippet.language = :language', { language });
-        if (difficulty)            qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
-        if (isActive !== undefined) qb.andWhere('snippet.isActive = :isActive', { isActive });
+        if (language)   qb.andWhere('snippet.language = :language', { language });
+        if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
 
         const [items, total] = await qb
-            .skip((page - 1) * limit)
-            .take(limit)
+            .skip((page - 1) * size)
+            .take(size)
             .getManyAndCount();
 
-        return { items, total, page, limit };
+        return { data: items.map(SnippetResponseDto.from), total, page, size };
     }
 
-    async findById(id: number): Promise<Snippet> {
-        const snippet = await this.snippetRepository.findOne({ where: { id } });
+    // 단건 조회 — 활성화된 스니펫만 반환
+    async findOne(id: number): Promise<SnippetResponseDto> {
+        const snippet = await this.snippetRepository.findOne({
+            where: { id, isActive: true },
+        });
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
-        return snippet;
+        return SnippetResponseDto.from(snippet);
     }
 
-    async update(id: number, dto: UpdateSnippetDto): Promise<Snippet> {
-        const snippet = await this.findById(id);
-        const changes = Object.fromEntries(
-            Object.entries(dto).filter(([, v]) => v !== undefined),
-        );
-        Object.assign(snippet, changes);
-        return this.snippetRepository.save(snippet);
+    // 솔로 연습용 — 활성화된 스니펫 중 랜덤 1개 반환
+    async findRandom(language?: SnippetLanguage, difficulty?: SnippetDifficulty): Promise<SnippetResponseDto> {
+        const qb = this.snippetRepository
+            .createQueryBuilder('snippet')
+            .where('snippet.isActive = true')
+            .orderBy('RANDOM()');
+
+        if (language)   qb.andWhere('snippet.language = :language', { language });
+        if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
+
+        const snippet = await qb.getOne();
+        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+        return SnippetResponseDto.from(snippet);
     }
 
-    async deactivate(id: number): Promise<void> {
-        const snippet = await this.findById(id);
-        if (!snippet.isActive) return;
-        snippet.isActive = false;
-        await this.snippetRepository.save(snippet);
+    // 데일리 챌린지용 — isDaily=true인 활성 스니펫 1개 반환 (최신순)
+    async findDaily(): Promise<SnippetResponseDto> {
+        const snippet = await this.snippetRepository.findOne({
+            where: { isDaily: true, isActive: true },
+            order: { createdAt: 'DESC' },
+        });
+        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+        return SnippetResponseDto.from(snippet);
     }
 }
