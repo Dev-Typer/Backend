@@ -24,7 +24,7 @@ export class Snippet {
   @Column({ type: 'text' })
   content!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   source!: string | null;
 
   @Column({ type: 'float', default: 0 })
