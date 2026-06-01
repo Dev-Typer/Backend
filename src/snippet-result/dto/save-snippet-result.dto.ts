@@ -1,7 +1,40 @@
-import { IsArray, IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TypoData } from '../types/typo-data.interface';
 import { ReplayEvent } from '../types/replay-event.interface';
+
+class TypoDataDto implements TypoData {
+  @IsInt()
+  index!: number;
+
+  @IsString()
+  @MaxLength(10)
+  expected!: string;
+
+  @IsString()
+  @MaxLength(10)
+  typed!: string;
+
+  @IsString()
+  @MaxLength(50)
+  word!: string;
+}
+
+class ReplayEventDto implements ReplayEvent {
+  @IsInt()
+  index!: number;
+
+  @IsString()
+  @MaxLength(5)
+  char!: string;
+
+  @IsInt()
+  @Min(0)
+  timestamp!: number;
+
+  @IsBoolean()
+  correct!: boolean;
+}
 
 export class SaveSnippetResultDto {
   @IsInt()
@@ -14,6 +47,7 @@ export class SaveSnippetResultDto {
 
   @IsNumber()
   @Min(0.1)
+  @Max(300)
   rawWpm!: number;
 
   @IsNumber()
@@ -27,10 +61,15 @@ export class SaveSnippetResultDto {
 
   @IsOptional()
   @IsArray()
-  typos?: TypoData[] = [];
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => TypoDataDto)
+  typos?: TypoDataDto[] = [];
 
   @IsOptional()
   @IsArray()
-  @Type(() => Object)
-  replayData?: ReplayEvent[] = [];
+  @ArrayMaxSize(5000)
+  @ValidateNested({ each: true })
+  @Type(() => ReplayEventDto)
+  replayData?: ReplayEventDto[] = [];
 }
