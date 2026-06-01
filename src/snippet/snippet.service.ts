@@ -2,8 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Snippet } from './snippet.entity';
-import { SnippetLanguage } from './enums/snippet-language.enum';
-import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
+import { CreateSnippetDto } from './dto/create-snippet.dto';
+import { UpdateSnippetDto } from './dto/update-snippet.dto';
+import { SnippetQueryDto } from './dto/snippet-query.dto';
+import { BusinessException } from '../common/exceptions/business.exception';
+import { SnippetError } from '../common/exceptions/error-code';
+
+export interface SnippetPage {
+  items: Snippet[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 @Injectable()
 export class SnippetService {
@@ -12,23 +22,44 @@ export class SnippetService {
         private snippetRepository: Repository<Snippet>,
     ) {}
 
-    // TODO: 특정 ID 스니펫 조회
-    async findById(id: number): Promise<Snippet | null> {
-        throw new Error('TODO');
+    async create(dto: CreateSnippetDto): Promise<Snippet> {
+        const snippet = this.snippetRepository.create(dto);
+        return this.snippetRepository.save(snippet);
     }
 
-    // TODO: 언어/난이도 필터로 랜덤 스니펫 1개 반환 (솔로 연습용)
-    async findRandom(language?: SnippetLanguage, difficulty?: SnippetDifficulty): Promise<Snippet | null> {
-        throw new Error('TODO');
+    async findAll(query: SnippetQueryDto): Promise<SnippetPage> {
+        const { language, difficulty, page = 1, limit = 20 } = query;
+
+        const qb = this.snippetRepository
+            .createQueryBuilder('snippet')
+            .orderBy('snippet.createdAt', 'DESC');
+
+        if (language)   qb.andWhere('snippet.language = :language', { language });
+        if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
+
+        const [items, total] = await qb
+            .skip((page - 1) * limit)
+            .take(limit)
+            .getManyAndCount();
+
+        return { items, total, page, limit };
     }
 
-    // TODO: 오늘의 데일리 챌린지 스니펫 반환 (isDaily=true인 것 중 오늘 날짜 기준)
-    async findDaily(): Promise<Snippet | null> {
-        throw new Error('TODO');
+    async findById(id: number): Promise<Snippet> {
+        const snippet = await this.snippetRepository.findOne({ where: { id } });
+        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+        return snippet;
     }
 
-    // TODO: 게임 종료 후 avgWpm, playCount 업데이트
-    async updateStats(id: number, wpm: number): Promise<void> {
-        throw new Error('TODO');
+    async update(id: number, dto: UpdateSnippetDto): Promise<Snippet> {
+        const snippet = await this.findById(id);
+        Object.assign(snippet, dto);
+        return this.snippetRepository.save(snippet);
+    }
+
+    async deactivate(id: number): Promise<void> {
+        const snippet = await this.findById(id);
+        snippet.isActive = false;
+        await this.snippetRepository.save(snippet);
     }
 }
