@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { SnippetAdminService } from './snippet.admin.service';
+import { SnippetAdminService } from './snippet-admin.service';
 import { CreateSnippetDto } from './dto/create-snippet.dto';
 import { UpdateSnippetDto } from './dto/update-snippet.dto';
 import { SnippetQueryDto } from './dto/snippet-query.dto';
