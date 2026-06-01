@@ -81,15 +81,14 @@ export class SnippetService {
             .select('r.userId', 'userId')
             .addSelect('u.username', 'username')
             .addSelect('MAX(r.wpm)', 'wpm')
-            .addSelect('r.accuracy', 'accuracy')
+            .addSelect('MAX(r.accuracy)', 'accuracy')
             .addSelect('MAX(r.createdAt)', 'createdAt')
             .innerJoin('r.user', 'u')
             .where('r.snippetId = :snippetId', { snippetId })
             .groupBy('r.userId')
             .addGroupBy('u.username')
-            .addGroupBy('r.accuracy')
             .orderBy('MAX(r.wpm)', 'DESC')
-            .addOrderBy('r.accuracy', 'DESC')
+            .addOrderBy('MAX(r.accuracy)', 'DESC')
             .limit(50)
             .getRawMany<{ userId: number; username: string; wpm: string; accuracy: string; createdAt: Date }>();
 

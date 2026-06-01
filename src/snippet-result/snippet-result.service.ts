@@ -53,9 +53,10 @@ export class SnippetResultService {
         .update(Snippet)
         .set({
           playCount: () => 'play_count + 1',
-          avgWpm: () => `ROUND(((avg_wpm * play_count) + ${dto.wpm}) / (play_count + 1), 1)`,
+          avgWpm: () => 'ROUND(((avg_wpm * play_count) + :wpm) / (play_count + 1), 1)',
         })
         .where('id = :id', { id: dto.snippetId })
+        .setParameter('wpm', dto.wpm)
         .execute();
 
       return saved;
@@ -102,22 +103,22 @@ export class SnippetResultService {
     return dto;
   }
 
-  // 유저별 최고 기록 기준 순위 계산
+  // 유저별 최고 기록 기준 순위 계산 — 상관 서브쿼리로 각 유저의 최고 WPM과 비교
   private async calcRank(snippetId: number, myWpm: number): Promise<number> {
     const raw = await this.snippetResultRepository
       .createQueryBuilder('r')
       .select('COUNT(DISTINCT r.userId)', 'count')
-      .where((qb) => {
+      .where('r.snippetId = :snippetId')
+      .andWhere((qb) => {
         const sub = qb
           .subQuery()
-          .select('MAX(s.wpm)', 'max_wpm')
+          .select('MAX(s.wpm)')
           .from(SnippetResult, 's')
           .where('s.snippetId = :snippetId')
-          .groupBy('s.userId')
+          .andWhere('s.userId = r.userId')
           .getQuery();
         return `(${sub}) > :myWpm`;
       })
-      .andWhere('r.snippetId = :snippetId')
       .setParameters({ snippetId, myWpm })
       .getRawOne<{ count: string }>();
 
@@ -146,36 +147,47 @@ export class SnippetResultService {
       for (let j = wordStart; j < content.length; j++) wordAtIndex[j] = currentWord;
     }
 
-    // replayData에서 단어별 타이핑 시간 집계
-    const wordTimes = new Map<string, { first: number; last: number }>();
+    // replayData에서 단어별 타이핑 시간 집계 — key를 word:wordStart로 동일 단어 중복 구분
+    const wordTimes = new Map<string, { word: string; first: number; last: number }>();
     for (const event of result.replayData) {
       const word = wordAtIndex[event.index];
       if (!word) continue;
-      const prev = wordTimes.get(word);
+      // 단어 시작 인덱스를 찾아 키로 사용
+      const wordStartIdx = event.index - (wordAtIndex.slice(0, event.index).filter(w => w === word).length > 0
+        ? event.index - wordAtIndex.lastIndexOf(word, event.index - word.length + 1)
+        : 0);
+      const key = `${word}:${wordStartIdx}`;
+      const prev = wordTimes.get(key);
       if (!prev) {
-        wordTimes.set(word, { first: event.timestamp, last: event.timestamp });
+        wordTimes.set(key, { word, first: event.timestamp, last: event.timestamp });
       } else {
-        wordTimes.set(word, { first: Math.min(prev.first, event.timestamp), last: Math.max(prev.last, event.timestamp) });
+        prev.first = Math.min(prev.first, event.timestamp);
+        prev.last  = Math.max(prev.last,  event.timestamp);
       }
     }
 
     // 단어별 소요 시간 (ms) 계산, 단어 길이로 정규화
     const wordSpeeds: { word: string; msPerChar: number }[] = [];
-    for (const [word, { first, last }] of wordTimes) {
+    for (const { word, first, last } of wordTimes.values()) {
       const duration = last - first || 1;
       wordSpeeds.push({ word, msPerChar: duration / word.length });
     }
 
     wordSpeeds.sort((a, b) => a.msPerChar - b.msPerChar);
 
-    const bestWords  = wordSpeeds.slice(0, 5).map((w) => w.word);
-    const worstWords = wordSpeeds.slice(-5).reverse().map((w) => w.word);
+    // 단어가 5개 미만이면 겹치지 않도록 절반씩 분리
+    const half = Math.floor(wordSpeeds.length / 2);
+    const topN = Math.min(5, half);
+    const bestWords  = topN > 0 ? wordSpeeds.slice(0, topN).map((w) => w.word) : [];
+    const worstWords = topN > 0 ? wordSpeeds.slice(-topN).reverse().map((w) => w.word) : [];
 
     return { bestWords, worstWords };
   }
 
   // replayData 기반 1초 단위 WPM 스냅샷
   private calcWpmGraph(result: SnippetResult): WpmGraphPoint[] {
+    if (!result.replayData.length) return [];
+
     const graph: WpmGraphPoint[] = [];
     const totalSec = result.durationSec;
 

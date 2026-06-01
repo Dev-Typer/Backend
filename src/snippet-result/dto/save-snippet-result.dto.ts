@@ -53,6 +53,7 @@ export class SaveSnippetResultDto {
 
   @IsInt()
   @Min(3)
+  @Max(600)
   durationSec!: number;
 
   @IsOptional()
