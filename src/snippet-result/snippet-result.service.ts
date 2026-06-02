@@ -53,7 +53,7 @@ export class SnippetResultService {
         .update(Snippet)
         .set({
           playCount: () => '"playCount" + 1',
-          avgWpm: () => 'ROUND((("avgWpm" * "playCount") + :wpm) / ("playCount" + 1), 1)',
+          avgWpm: () => 'ROUND(((("avgWpm" * "playCount") + :wpm) / ("playCount" + 1))::numeric, 1)',
         })
         .where('id = :id', { id: dto.snippetId })
         .setParameter('wpm', dto.wpm)
