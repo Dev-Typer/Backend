@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { SnippetAdminService } from './snippet-admin.service';
 import { CreateSnippetDto } from './dto/create-snippet.dto';
 import { UpdateSnippetDto } from './dto/update-snippet.dto';
+import { AdminSnippetQueryDto } from './dto/snippet-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RoleGuard } from '../common/guards/role.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -14,6 +15,14 @@ import { ApiResponse } from '../common/dto/api-response';
 @Roles(UserRole.ADMIN)
 export class SnippetAdminController {
   constructor(private readonly snippetAdminService: SnippetAdminService) {}
+
+  // GET /api/admin/snippets?language=&difficulty=&isActive=&page=&size=
+  // 스니펫 목록 조회. 비활성 포함 전체 조회 가능
+  @Get()
+  async findAll(@Query() query: AdminSnippetQueryDto) {
+    const result = await this.snippetAdminService.findAll(query);
+    return ApiResponse.success(result, HttpStatus.OK);
+  }
 
   // POST /api/admin/snippets
   // 스니펫 등록. title, language, difficulty, content 필수 / source 선택
