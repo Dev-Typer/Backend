@@ -52,8 +52,8 @@ export class SnippetResultService {
         .createQueryBuilder()
         .update(Snippet)
         .set({
-          playCount: () => 'play_count + 1',
-          avgWpm: () => 'ROUND(((avg_wpm * play_count) + :wpm) / (play_count + 1), 1)',
+          playCount: () => '"playCount" + 1',
+          avgWpm: () => 'ROUND(((("avgWpm" * "playCount") + :wpm) / ("playCount" + 1))::numeric, 1)',
         })
         .where('id = :id', { id: dto.snippetId })
         .setParameter('wpm', dto.wpm)
