@@ -23,6 +23,7 @@ export class SnippetResultService {
   async save(
     dto: SaveSnippetResultDto,
     userId: number | null,
+    isDaily = false,
   ): Promise<SnippetResultResponseDto | null> {
     const snippet = await this.snippetRepository.findOne({
       where: { id: dto.snippetId },
@@ -44,6 +45,8 @@ export class SnippetResultService {
           accuracy: dto.accuracy,
           durationSec: dto.durationSec,
           typos: dto.typos ?? [],
+          nWpm: dto.wpm * (dto.accuracy / 100),
+          isDaily,
           replayData: dto.replayData ?? [],
         }),
       );
