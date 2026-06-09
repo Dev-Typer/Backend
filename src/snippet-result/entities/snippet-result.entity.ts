@@ -45,6 +45,12 @@ export class SnippetResult {
     @Column({ type: 'jsonb', default: [] })
     typos!: TypoData[];
 
+    @Column({ type : 'decimal', precision: 10, scale: 4})
+    nWpm!: number;
+
+    @Column({ default: false})
+    isDaily!: boolean;
+
     @Column({ type: 'jsonb', default: [] })
     replayData!: ReplayEvent[];
 
