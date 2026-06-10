@@ -7,6 +7,7 @@ import { SaveSnippetResultDto } from './dto/save-snippet-result.dto';
 import { SnippetResultResponseDto } from './dto/snippet-result-response.dto';
 import { SnippetResultStatsResponseDto, WpmGraphPoint, WordStats } from './dto/snippet-result-stats-response.dto';
 import { SnippetResultReplayResponseDto } from './dto/snippet-result-replay-response.dto';
+import { SnippetRankingResponseDto, SnippetRankingItemDto } from '../snippet/dto/snippet-ranking-response.dto';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { SnippetError, ResultError } from '../common/exceptions/error-code';
 
@@ -92,6 +93,44 @@ export class SnippetResultService {
     dto.rank        = rank;
     dto.wordStats   = wordStats;
     dto.wpmGraph    = wpmGraph;
+    return dto;
+  }
+
+  // 스니펫별 랭킹 — 유저별 최고 기록 기준 상위 50위
+  async findRanking(snippetId: number): Promise<SnippetRankingResponseDto> {
+    const snippet = await this.snippetRepository.findOne({ where: { id: snippetId } });
+    if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+
+    const rows = await this.snippetResultRepository
+      .createQueryBuilder('r')
+      .select('r.userId', 'userId')
+      .addSelect('u.username', 'username')
+      .addSelect('MAX(r.wpm)', 'wpm')
+      .addSelect('MAX(r.accuracy)', 'accuracy')
+      .addSelect('MAX(r.createdAt)', 'createdAt')
+      .innerJoin('r.user', 'u')
+      .where('r.snippetId = :snippetId', { snippetId })
+      .groupBy('r.userId')
+      .addGroupBy('u.username')
+      .orderBy('MAX(r.wpm)', 'DESC')
+      .addOrderBy('MAX(r.accuracy)', 'DESC')
+      .limit(50)
+      .getRawMany<{ userId: number; username: string; wpm: string; accuracy: string; createdAt: Date }>();
+
+    const items: SnippetRankingItemDto[] = rows.map((row, i) => {
+      const item = new SnippetRankingItemDto();
+      item.rank      = i + 1;
+      item.userId    = row.userId;
+      item.username  = row.username;
+      item.wpm       = Number(row.wpm);
+      item.accuracy  = Number(row.accuracy);
+      item.createdAt = row.createdAt;
+      return item;
+    });
+
+    const dto = new SnippetRankingResponseDto();
+    dto.items = items;
+    dto.total = items.length;
     return dto;
   }
 
