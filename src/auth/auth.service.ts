@@ -43,8 +43,7 @@ export class AuthService {
         const payload: JwtPayload = { sub: user.id, username: user.username, role: user.role };
         const token = this.jwtService.sign(payload, { expiresIn: this.jwtConf.refreshExpiresSeconds });
 
-        const expiresAt = new Date();
-        expiresAt.setSeconds(expiresAt.getSeconds() + this.jwtConf.refreshExpiresSeconds);
+        const expiresAt = new Date(Date.now() + this.jwtConf.refreshExpiresSeconds * 1000);
 
         await this.dataSource.transaction(async (manager) => {
             await manager.update(RefreshToken, { userId: user.id, isRevoked: false }, { isRevoked: true });

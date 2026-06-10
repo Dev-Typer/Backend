@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RefreshToken } from './entity/refresh-token.entity';
@@ -13,7 +13,7 @@ export class AuthScheduler {
         private refreshTokenRepository: Repository<RefreshToken>,
     ) {}
 
-    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    @Cron('0 0 * * *', { timeZone: 'UTC' })
     async cleanupExpiredTokens(): Promise<void> {
         try {
             const result = await this.refreshTokenRepository
