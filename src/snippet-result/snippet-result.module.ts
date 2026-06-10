@@ -13,6 +13,6 @@ import { SnippetModule } from '../snippet/snippet.module';
     ],
     controllers: [SnippetResultController, SnippetRankingController],
     providers: [SnippetResultService],
-    exports: [SnippetResultService, TypeOrmModule],
+    exports: [SnippetResultService],
 })
 export class SnippetResultModule {}

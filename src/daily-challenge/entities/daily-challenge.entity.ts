@@ -13,8 +13,8 @@ export class DailyChallenge {
     @Column()
     snippetId!: number;
     
-    @Column({ type : 'date', unique : true})
-    date!: Date;
+    @Column({ type: 'date', unique: true })
+    date!: string; // PostgreSQL date 타입은 'YYYY-MM-DD' 문자열로 반환
 
     @CreateDateColumn()
     createdAt!: Date;

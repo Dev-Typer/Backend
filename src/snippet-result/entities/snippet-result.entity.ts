@@ -45,7 +45,7 @@ export class SnippetResult {
     @Column({ type: 'jsonb', default: [] })
     typos!: TypoData[];
 
-    @Column({ type : 'decimal', precision: 10, scale: 4})
+    @Column({ type: 'decimal', precision: 10, scale: 4, default: 0 })
     nWpm!: number;
 
     @Column({ default: false})
