@@ -67,13 +67,4 @@ export class SnippetService {
         return SnippetResponseDto.from(snippet);
     }
 
-    // 데일리 챌린지용 — isDaily=true인 활성 스니펫 1개 반환 (최신순)
-    async findDaily(): Promise<SnippetResponseDto> {
-        const snippet = await this.snippetRepository.findOne({
-            where: { isDaily: true, isActive: true },
-            order: { createdAt: 'DESC' },
-        });
-        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
-        return SnippetResponseDto.from(snippet);
-    }
 }

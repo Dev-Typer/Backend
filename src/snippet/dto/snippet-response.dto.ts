@@ -11,7 +11,6 @@ export class SnippetResponseDto {
   source!: string | null;
   avgWpm!: number;
   playCount!: number;
-  isDaily!: boolean;
   isActive!: boolean;
   createdAt!: Date;
 
@@ -25,7 +24,6 @@ export class SnippetResponseDto {
     dto.source     = snippet.source;
     dto.avgWpm     = snippet.avgWpm;
     dto.playCount  = snippet.playCount;
-    dto.isDaily    = snippet.isDaily;
     dto.isActive   = snippet.isActive;
     dto.createdAt  = snippet.createdAt;
     return dto;

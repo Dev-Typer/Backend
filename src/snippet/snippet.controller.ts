@@ -25,14 +25,6 @@ export class SnippetController {
     return ApiResponse.success(snippet, HttpStatus.OK);
   }
 
-  // GET /api/snippets/daily
-  // 데일리 챌린지 스니펫 조회. 인증 불필요
-  @Get('daily')
-  async findDaily(): Promise<ApiResponse<SnippetResponseDto>> {
-    const snippet = await this.snippetService.findDaily();
-    return ApiResponse.success(snippet, HttpStatus.OK);
-  }
-
   // GET /api/snippets/:id
   // 단건 조회. 비활성화된 스니펫은 404 반환
   @Get(':id')

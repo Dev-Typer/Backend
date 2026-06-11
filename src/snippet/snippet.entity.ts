@@ -33,9 +33,6 @@ export class Snippet {
   @Column({ default: 0 })
   playCount!: number;
 
-  @Column({ default: false })
-  isDaily!: boolean;
-
   @Column({ default: true })
   isActive! : boolean;
 
