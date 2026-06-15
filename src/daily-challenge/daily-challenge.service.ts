@@ -1,28 +1,129 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { DailyChallenge } from './entities/daily-challenge.entity';
+import { Transactional } from 'typeorm-transactional';
+import { DailyChallengeRepository } from './daily-challenge.repository';
+import { SnippetRepository } from '../snippet/snippet.repository';
+import { SnippetResultRepository } from '../snippet-result/snippet-result.repository';
 import { DailyChallengeResponseDto } from './dto/daily-challenge-response.dto';
+import { SubmitDailyChallengeDto } from './dto/submit-daily-challenge.dto';
+import {
+    BestStatus,
+    NearbyUserItem,
+    NearbyUserRelation,
+    RankChangeStatus,
+    SubmitDailyChallengeResponseDto,
+} from './dto/submit-daily-challenge-response.dto';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { DailyError } from '../common/exceptions/error-code';
+import { DailyChallenge } from './entities/daily-challenge.entity';
 
 @Injectable()
 export class DailyChallengeService {
     constructor(
-        @InjectRepository(DailyChallenge)
-        private dailyChallengeRepository: Repository<DailyChallenge>,
+        private readonly dailyChallengeRepository: DailyChallengeRepository,
+        private readonly snippetRepository: SnippetRepository,
+        private readonly snippetResultRepository: SnippetResultRepository,
     ) {}
 
     async getDailyChallenge(): Promise<DailyChallengeResponseDto> {
-        const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
-
-        const challenge = await this.dailyChallengeRepository.findOne({
-            where: { date: today },
-            relations: { snippet: true },
-        });
-
-        if (!challenge) throw new BusinessException(DailyError.NOT_FOUND);
-
+        const challenge = await this.getSnippet();
         return DailyChallengeResponseDto.from(challenge);
+    }
+
+    @Transactional()
+    async submit(dto: SubmitDailyChallengeDto, userId: number): Promise<SubmitDailyChallengeResponseDto> {
+        const challenge = await this.getSnippet();
+        const { start, end } = this.getTodayKstRange(challenge.date);
+
+        const beforeLeaderboard = await this.snippetResultRepository.findLeaderboard(
+            challenge.snippetId, start, end,
+        );
+
+        const nWpm = dto.wpm * (dto.accuracy / 100);
+        const savedResult = await this.snippetResultRepository.save({
+            userId,
+            snippetId: challenge.snippetId,
+            wpm: dto.wpm,
+            rawWpm: dto.rawWpm,
+            accuracy: dto.accuracy,
+            durationSec: dto.durationSec,
+            nWpm,
+            typos: dto.typos ?? [],
+            replayData: dto.replayData ?? [],
+            isDaily: true,
+        });
+        await this.snippetRepository.incrementStats(challenge.snippetId, dto.wpm);
+
+        const afterLeaderboard = await this.snippetResultRepository.findLeaderboard(
+            challenge.snippetId, start, end,
+        );
+        
+        // 기존 데이터
+        const beforeEntry = beforeLeaderboard.find(row => row.userId === userId);
+        // 이후 데이터
+        const afterEntry  = afterLeaderboard.find(row => row.userId === userId)!;
+
+        // 이후 데이터가 몇번째 row인지 (0-based index) → 랭킹은 1부터 시작하므로 +1
+        const afterRank  = afterLeaderboard.indexOf(afterEntry) + 1;
+
+        // 기존 데이터가 없으면 첫 제출이므로 beforeRank, rankDelta는 undefined
+        const beforeRank = beforeEntry ? beforeLeaderboard.indexOf(beforeEntry) + 1 : undefined;
+
+        // 기존 데이터가 있으면 isFirst = false → rankDelta 계산 가능, 없으면 isFirst = true → rankDelta는 undefined
+        const isFirst    = !beforeEntry;
+
+        // rankDelta는 기존 데이터가 있을 때만 계산 — 첫 제출은 순위 변동 수치 없음
+        const rankDelta  = isFirst ? undefined : beforeRank! - afterRank;
+
+        // rankChange는 첫 제출 여부와 rankDelta에 따라 결정
+        const rankChange = isFirst        ? RankChangeStatus.FIRST_ATTEMPT
+                         : rankDelta! > 0 ? RankChangeStatus.UP
+                         : rankDelta! < 0 ? RankChangeStatus.DOWN
+                         :                  RankChangeStatus.SAME;
+
+        // 오늘 개인 최고 기록 갱신 여부 — 기존 데이터가 없으면 무조건 NEW_BEST, 기존 데이터가 있으면 nWpm 비교
+        const bestStatus = !beforeEntry || Number(afterEntry.nWpm) > Number(beforeEntry.nWpm)
+            ? BestStatus.NEW_BEST
+            : BestStatus.NOT_BEST;
+
+        // 랭킹 기준으로 위 2명·본인·아래 2명 추출 — afterRank 기준으로 상하 2명씩, 최대 5명
+        const nearbyStart  = Math.max(0, afterRank - 3);
+
+        // afterRank는 1-based이므로 nearbyStart도 1-based로 맞춰주기 위해 -1 → slice는 0-based이므로 결과적으로는 afterRank 기준으로 위 2명·본인·아래 2명 추출
+        const nearbyUsers: NearbyUserItem[] = afterLeaderboard
+            .slice(nearbyStart, afterRank + 2)
+            .map((row, i) => {
+                const item    = new NearbyUserItem();
+                item.rank     = nearbyStart + i + 1;
+                item.userId   = row.userId;
+                item.username = row.username;
+                item.nWpm     = Number(row.nWpm);
+                item.relation = row.userId === userId ? NearbyUserRelation.ME : NearbyUserRelation.OTHER;
+                return item;
+            });
+
+        return new SubmitDailyChallengeResponseDto({
+            resultId: savedResult.id,
+            nWpm,
+            afterRank,
+            beforeRank,
+            rankDelta,
+            rankChange,
+            bestStatus,
+            nearbyUsers,
+        });
+    }
+
+    private getTodayKstRange(today: string): { start: Date; end: Date } {
+        const start = new Date(`${today}T00:00:00+09:00`);
+        const end   = new Date(`${today}T00:00:00+09:00`);
+        end.setUTCDate(end.getUTCDate() + 1);
+        return { start, end };
+    }
+
+    private async getSnippet(): Promise<DailyChallenge> {
+        const today = new Date().toISOString().slice(0, 10);
+        const challenge = await this.dailyChallengeRepository.findByDate(today);
+        if (!challenge) throw new BusinessException(DailyError.NOT_FOUND);
+        return challenge;
     }
 }
