@@ -9,7 +9,7 @@ export class DailyChallengeScheduler {
     ) {}
 
     // UTC 자정 = KST 09:00 에 실행
-    @Cron('0 0 * * *')
+    @Cron('0 0 * * *', { timeZone: 'UTC' })
     async runDailyJob(): Promise<void> {
         await this.dailyChallengeService.selectNextSnippet();
     }

@@ -21,17 +21,11 @@ export class DailyChallengeRepository {
         return this.repo.save(this.repo.create(data));
     }
 
-    // 노출 횟수 적은 순 → 플레이 수 낮은 순 → 랜덤으로 다음 daily 스니펫 ID 선정
-    async findNextSnippetId(): Promise<number | null> {
-        const rows: { id: number }[] = await this.repo.query(`
-            SELECT s.id
-            FROM snippet s
-            LEFT JOIN daily_challenge dc ON dc."snippetId" = s.id
-            WHERE s."isActive" = true
-            GROUP BY s.id, s."playCount"
-            ORDER BY COUNT(dc.id) ASC, s."playCount" ASC, RANDOM()
-            LIMIT 1
-        `);
-        return rows[0]?.id ?? null;
+    // 스니펫별 daily 노출 횟수 — daily_challenge 테이블만 조회 (cross-domain JOIN 없음)
+    async findUsageCounts(): Promise<{ snippetId: number; count: number }[]> {
+        const rows: { snippetId: number; count: string }[] = await this.repo.query(
+            `SELECT "snippetId", COUNT(*) as count FROM daily_challenge GROUP BY "snippetId"`,
+        );
+        return rows.map(r => ({ snippetId: r.snippetId, count: Number(r.count) }));
     }
 }

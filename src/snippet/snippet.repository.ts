@@ -65,6 +65,11 @@ export class SnippetRepository {
         return this.repo.save(snippet);
     }
 
+    // 활성화된 스니펫 전체 조회 — daily 후보 선정 시 사용 (페이지네이션 없음)
+    async findAllActive(): Promise<Snippet[]> {
+        return this.repo.find({ where: { isActive: true } });
+    }
+
     // 결과 저장 시 playCount +1, avgWpm 갱신
     async incrementStats(snippetId: number, wpm: number): Promise<void> {
         await this.repo

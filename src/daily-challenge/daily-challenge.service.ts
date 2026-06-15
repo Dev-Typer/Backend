@@ -60,8 +60,8 @@ export class DailyChallengeService {
         
         // 기존 데이터
         const beforeEntry = beforeLeaderboard.find(row => row.userId === userId);
-        // 이후 데이터
-        const afterEntry  = afterLeaderboard.find(row => row.userId === userId)!;
+        const afterEntry = afterLeaderboard.find(row => row.userId === userId);
+        if (!afterEntry) throw new BusinessException(DailyError.NOT_FOUND);
 
         // 이후 데이터가 몇번째 row인지 (0-based index) → 랭킹은 1부터 시작하므로 +1
         const afterRank  = afterLeaderboard.indexOf(afterEntry) + 1;
@@ -104,7 +104,7 @@ export class DailyChallengeService {
 
         return new SubmitDailyChallengeResponseDto({
             resultId: savedResult.id,
-            nWpm,
+            nWpm: Number(afterEntry.nWpm), // DB decimal 저장값 기준으로 통일
             afterRank,
             beforeRank,
             rankDelta,
@@ -151,10 +151,33 @@ export class DailyChallengeService {
     }
 
     async selectNextSnippet(): Promise<void> {
-        const snippetId = await this.dailyChallengeRepository.findNextSnippetId();
-        if (!snippetId) return;
         const date = new Date().toISOString().slice(0, 10); // UTC 오늘 날짜
-        await this.dailyChallengeRepository.save({ snippetId, date });
+
+        // m-2: 이미 오늘 챌린지가 있으면 중복 생성 방지
+        const existing = await this.dailyChallengeRepository.findByDate(date);
+        if (existing) return;
+
+        // daily_challenge 테이블에서 스니펫별 노출 횟수를 가져온 뒤
+        // snippet 테이블에서 활성 스니펫 전체를 가져와 Service에서 조율
+        const [usageCounts, activeSnippets] = await Promise.all([
+            this.dailyChallengeRepository.findUsageCounts(),
+            this.snippetRepository.findAllActive(),
+        ]);
+
+        if (!activeSnippets.length) return;
+
+        const countMap = new Map(usageCounts.map(r => [r.snippetId, r.count]));
+
+        // 노출 횟수 적은 것 → playCount 적은 것 순으로 후보 선정
+        const sorted = activeSnippets
+            .map(s => ({ id: s.id, score: (countMap.get(s.id) ?? 0) * 100_000 + s.playCount }))
+            .sort((a, b) => a.score - b.score);
+
+        const minScore = sorted[0].score;
+        const candidates = sorted.filter(s => s.score === minScore);
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+
+        await this.dailyChallengeRepository.save({ snippetId: chosen.id, date });
     }
 
     private getTodayUtcRange(today: string): { start: Date; end: Date } {
