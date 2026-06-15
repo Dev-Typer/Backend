@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { addTransactionalDataSource } from 'typeorm-transactional';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './auth/auth.module';
 import { SnippetModule } from './snippet/snippet.module';
@@ -29,6 +31,10 @@ import jwtConfig from './config/jwt.config';
         synchronize: config.get<string>('NODE_ENV') !== 'production',
         logging: config.get<string>('NODE_ENV') !== 'production',
       }),
+      dataSourceFactory: async (options) => {
+        const dataSource = await new DataSource(options!).initialize();
+        return addTransactionalDataSource(dataSource);
+      },
     }),
     ScheduleModule.forRoot(),
     AuthModule,
