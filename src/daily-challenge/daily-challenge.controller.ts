@@ -5,8 +5,10 @@ import { SubmitDailyChallengeDto } from './dto/submit-daily-challenge.dto';
 import { SubmitDailyChallengeResponseDto } from './dto/submit-daily-challenge-response.dto';
 import { DailyChallengeService } from './daily-challenge.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtUser } from '../common/types/jwt-user.type';
+import { ChallengeLeaderboardResponseDto } from './dto/challenge-leaderboard-response.dto';
 
 @Controller('/api/daily-challenge')
 export class DailyChallengeController {
@@ -30,5 +32,14 @@ export class DailyChallengeController {
     ): Promise<ApiResponse<SubmitDailyChallengeResponseDto>> {
         const result = await this.dailyChallengeService.submit(dto, user.userId);
         return ApiResponse.success(result, HttpStatus.CREATED);
+    }
+
+    @Get('/leaderboard')
+    @UseGuards(OptionalJwtAuthGuard) // 인증 선택적 — 로그인하면 내 순위 포함, 안 하면 전체 랭킹만
+    async getLeaderboard(
+        @CurrentUser() user: JwtUser | null,
+    ): Promise<ApiResponse<ChallengeLeaderboardResponseDto>> {
+        const result = await this.dailyChallengeService.getLeaderboard(user?.userId);
+        return ApiResponse.success(result, HttpStatus.OK);
     }
 }

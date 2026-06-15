@@ -9,6 +9,15 @@ export interface LeaderboardRow {
     nWpm: string; // TypeORM decimal → string으로 반환됨
 }
 
+export interface FullLeaderboardRow {
+    userId: number;
+    username: string;
+    wpm: string;
+    nWpm: string;
+    accuracy: string;
+    durationSec: number;
+}
+
 export interface RankingRow {
     userId: number;
     username: string;
@@ -52,6 +61,30 @@ export class SnippetResultRepository {
             .addGroupBy('u.username')
             .orderBy('MAX(r.nWpm)', 'DESC')
             .getRawMany<LeaderboardRow>();
+    }
+
+    // 오늘 daily 전체 리더보드 — DISTINCT ON으로 유저별 최고 nWpm 행만 추출, 상위 100위
+    async findFullLeaderboard(
+        snippetId: number,
+        start: Date,
+        end: Date,
+    ): Promise<FullLeaderboardRow[]> {
+        return this.repo.query(`
+            SELECT sub."userId", u.username, sub.wpm, sub."nWpm", sub.accuracy, sub."durationSec"
+            FROM (
+                SELECT DISTINCT ON (r."userId")
+                    r."userId", r.wpm, r."nWpm", r.accuracy, r."durationSec"
+                FROM snippet_result r
+                WHERE r."snippetId" = $1
+                  AND r."isDaily" = true
+                  AND r."createdAt" >= $2
+                  AND r."createdAt" < $3
+                ORDER BY r."userId", r."nWpm" DESC, r.accuracy DESC, r."durationSec" ASC
+            ) sub
+            JOIN "user" u ON u.id = sub."userId"
+            ORDER BY sub."nWpm" DESC, sub.accuracy DESC, sub."durationSec" ASC
+            LIMIT 100
+        `, [snippetId, start, end]);
     }
 
     // 스니펫별 랭킹 — 유저별 최고 기록 기준 상위 50위

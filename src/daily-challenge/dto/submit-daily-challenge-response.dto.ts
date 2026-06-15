@@ -50,3 +50,21 @@ export class SubmitDailyChallengeResponseDto {
     Object.assign(this, partial);
   }
 }
+
+export class LeaderboardItem {
+  rank!: number;
+  userId!: number;
+  username!: string;
+  wpm!: number;
+  nWpm!: number;
+  accuracy!: number;
+  durationSec!: number;
+}
+
+export class DailyChallengeLeaderBoardResponseDto {
+  date!: string;
+  snippetId!: number;
+  items!: LeaderboardItem[];
+  total!: number;
+}
+
