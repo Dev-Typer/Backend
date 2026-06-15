@@ -6,6 +6,7 @@ import { SnippetResultModule } from '../snippet-result/snippet-result.module';
 import { DailyChallengeService } from './daily-challenge.service';
 import { DailyChallengeController } from './daily-challenge.controller';
 import { DailyChallengeRepository } from './daily-challenge.repository';
+import { DailyChallengeScheduler } from './daily-challenge.scheduler';
 
 @Module({
   imports: [
@@ -14,6 +15,6 @@ import { DailyChallengeRepository } from './daily-challenge.repository';
     SnippetResultModule,
   ],
   controllers: [DailyChallengeController],
-  providers: [DailyChallengeService, DailyChallengeRepository],
+  providers: [DailyChallengeService, DailyChallengeRepository, DailyChallengeScheduler],
 })
 export class DailyChallengeModule {}

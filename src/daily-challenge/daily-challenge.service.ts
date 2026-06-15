@@ -5,6 +5,7 @@ import { SnippetRepository } from '../snippet/snippet.repository';
 import { SnippetResultRepository } from '../snippet-result/snippet-result.repository';
 import { DailyChallengeResponseDto } from './dto/daily-challenge-response.dto';
 import { SubmitDailyChallengeDto } from './dto/submit-daily-challenge.dto';
+import { ChallengeLeaderboardResponseDto, LeaderboardItem, MyRankStatus } from './dto/challenge-leaderboard-response.dto';
 import {
     BestStatus,
     NearbyUserItem,
@@ -32,7 +33,7 @@ export class DailyChallengeService {
     @Transactional()
     async submit(dto: SubmitDailyChallengeDto, userId: number): Promise<SubmitDailyChallengeResponseDto> {
         const challenge = await this.getSnippet();
-        const { start, end } = this.getTodayKstRange(challenge.date);
+        const { start, end } = this.getTodayUtcRange(challenge.date);
 
         const beforeLeaderboard = await this.snippetResultRepository.findLeaderboard(
             challenge.snippetId, start, end,
@@ -112,16 +113,59 @@ export class DailyChallengeService {
             nearbyUsers,
         });
     }
+    
+    async getLeaderboard(userId?: number): Promise<ChallengeLeaderboardResponseDto> {
+        const challenge = await this.getSnippet();
+        const { start, end } = this.getTodayUtcRange(challenge.date);
 
-    private getTodayKstRange(today: string): { start: Date; end: Date } {
-        const start = new Date(`${today}T00:00:00+09:00`);
-        const end   = new Date(`${today}T00:00:00+09:00`);
+        const rows = await this.snippetResultRepository.findFullLeaderboard(
+            challenge.snippetId, start, end,
+        );
+
+        const items: LeaderboardItem[] = rows.map((row, i) => new LeaderboardItem({
+            rank: i + 1,
+            userId: row.userId,
+            username: row.username,
+            wpm: Number(row.wpm),
+            nWpm: Number(row.nWpm),
+            accuracy: Number(row.accuracy),
+            durationSec: row.durationSec,
+        }));
+
+        const myItem = userId !== undefined
+            ? items.find(item => item.userId === userId)
+            : undefined;
+
+        const myRankStatus = userId === undefined  ? MyRankStatus.NOT_LOGGED_IN
+                           : myItem === undefined   ? MyRankStatus.NOT_PARTICIPATED
+                           :                         MyRankStatus.RANKED;
+
+        return new ChallengeLeaderboardResponseDto({
+            date: challenge.date,
+            snippetId: challenge.snippetId,
+            items,
+            total: items.length,
+            myRankStatus,
+            myRank: myItem?.rank,
+        });
+    }
+
+    async selectNextSnippet(): Promise<void> {
+        const snippetId = await this.dailyChallengeRepository.findNextSnippetId();
+        if (!snippetId) return;
+        const date = new Date().toISOString().slice(0, 10); // UTC 오늘 날짜
+        await this.dailyChallengeRepository.save({ snippetId, date });
+    }
+
+    private getTodayUtcRange(today: string): { start: Date; end: Date } {
+        const start = new Date(`${today}T00:00:00Z`);
+        const end   = new Date(`${today}T00:00:00Z`);
         end.setUTCDate(end.getUTCDate() + 1);
         return { start, end };
     }
 
     private async getSnippet(): Promise<DailyChallenge> {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = new Date().toISOString().slice(0, 10); // UTC 날짜
         const challenge = await this.dailyChallengeRepository.findByDate(today);
         if (!challenge) throw new BusinessException(DailyError.NOT_FOUND);
         return challenge;
