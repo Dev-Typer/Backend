@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
-import { SnippetResult } from './entities/snippet-result.entity';
-import { Snippet } from '../snippet/snippet.entity';
+import { Transactional } from 'typeorm-transactional';
+import { SnippetResultRepository } from './snippet-result.repository';
+import { SnippetRepository } from '../snippet/snippet.repository';
 import { SaveSnippetResultDto } from './dto/save-snippet-result.dto';
 import { SnippetResultResponseDto } from './dto/snippet-result-response.dto';
 import { SnippetResultStatsResponseDto, WpmGraphPoint, WordStats } from './dto/snippet-result-stats-response.dto';
@@ -10,75 +9,55 @@ import { SnippetResultReplayResponseDto } from './dto/snippet-result-replay-resp
 import { SnippetRankingResponseDto, SnippetRankingItemDto } from '../snippet/dto/snippet-ranking-response.dto';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { SnippetError, ResultError } from '../common/exceptions/error-code';
+import { SnippetResult } from './entities/snippet-result.entity';
 
 @Injectable()
 export class SnippetResultService {
   constructor(
-    @InjectRepository(SnippetResult)
-    private snippetResultRepository: Repository<SnippetResult>,
-    @InjectRepository(Snippet)
-    private snippetRepository: Repository<Snippet>,
-    private dataSource: DataSource,
+    private readonly snippetResultRepository: SnippetResultRepository,
+    private readonly snippetRepository: SnippetRepository,
   ) {}
 
+  @Transactional()
   async save(
     dto: SaveSnippetResultDto,
     userId: number | null,
     isDaily = false,
   ): Promise<SnippetResultResponseDto | null> {
-    const snippet = await this.snippetRepository.findOne({
-      where: { id: dto.snippetId },
-    });
+    const snippet = await this.snippetRepository.findById(dto.snippetId);
 
     if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
     if (!snippet.isActive) throw new BusinessException(SnippetError.INACTIVE);
 
     if (!userId) return null;
 
-    const result = await this.dataSource.transaction(async (manager) => {
-      const saved = await manager.save(
-        SnippetResult,
-        manager.create(SnippetResult, {
-          userId,
-          snippetId: dto.snippetId,
-          wpm: dto.wpm,
-          rawWpm: dto.rawWpm,
-          accuracy: dto.accuracy,
-          durationSec: dto.durationSec,
-          typos: dto.typos ?? [],
-          nWpm: dto.wpm * (dto.accuracy / 100),
-          isDaily,
-          replayData: dto.replayData ?? [],
-        }),
-      );
-
-      await manager
-        .createQueryBuilder()
-        .update(Snippet)
-        .set({
-          playCount: () => '"playCount" + 1',
-          avgWpm: () => 'ROUND(((("avgWpm" * "playCount") + :wpm) / ("playCount" + 1))::numeric, 1)',
-        })
-        .where('id = :id', { id: dto.snippetId })
-        .setParameter('wpm', dto.wpm)
-        .execute();
-
-      return saved;
+    const saved = await this.snippetResultRepository.save({
+      userId,
+      snippetId: dto.snippetId,
+      wpm: dto.wpm,
+      rawWpm: dto.rawWpm,
+      accuracy: dto.accuracy,
+      durationSec: dto.durationSec,
+      typos: dto.typos ?? [],
+      nWpm: dto.wpm * (dto.accuracy / 100),
+      isDaily,
+      replayData: dto.replayData ?? [],
     });
+    await this.snippetRepository.incrementStats(dto.snippetId, dto.wpm);
 
-    return SnippetResultResponseDto.from(result);
+    return SnippetResultResponseDto.from(saved);
   }
 
   async findStats(id: number, userId: number): Promise<SnippetResultStatsResponseDto> {
-    const result = await this.snippetResultRepository.findOne({ where: { id } });
+    const result = await this.snippetResultRepository.findById(id);
     if (!result) throw new BusinessException(ResultError.NOT_FOUND);
     if (result.userId !== userId) throw new BusinessException(ResultError.FORBIDDEN);
 
-    const snippet = await this.snippetRepository.findOne({ where: { id: result.snippetId } });
+    const snippet = await this.snippetRepository.findById(result.snippetId);
     if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
 
     const [rank, wordStats, wpmGraph] = await Promise.all([
-      this.calcRank(result.snippetId, result.wpm),
+      this.snippetResultRepository.calcRank(result.snippetId, result.wpm),
       this.calcWordStats(result, snippet.content),
       this.calcWpmGraph(result),
     ]);
@@ -98,24 +77,10 @@ export class SnippetResultService {
 
   // 스니펫별 랭킹 — 유저별 최고 기록 기준 상위 50위
   async findRanking(snippetId: number): Promise<SnippetRankingResponseDto> {
-    const snippet = await this.snippetRepository.findOne({ where: { id: snippetId } });
+    const snippet = await this.snippetRepository.findById(snippetId);
     if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
 
-    const rows = await this.snippetResultRepository
-      .createQueryBuilder('r')
-      .select('r.userId', 'userId')
-      .addSelect('u.username', 'username')
-      .addSelect('MAX(r.wpm)', 'wpm')
-      .addSelect('MAX(r.accuracy)', 'accuracy')
-      .addSelect('MAX(r.createdAt)', 'createdAt')
-      .innerJoin('r.user', 'u')
-      .where('r.snippetId = :snippetId', { snippetId })
-      .groupBy('r.userId')
-      .addGroupBy('u.username')
-      .orderBy('MAX(r.wpm)', 'DESC')
-      .addOrderBy('MAX(r.accuracy)', 'DESC')
-      .limit(50)
-      .getRawMany<{ userId: number; username: string; wpm: string; accuracy: string; createdAt: Date }>();
+    const rows = await this.snippetResultRepository.findRankingBySnippet(snippetId);
 
     const items: SnippetRankingItemDto[] = rows.map((row, i) => {
       const item = new SnippetRankingItemDto();
@@ -135,7 +100,7 @@ export class SnippetResultService {
   }
 
   async findReplay(id: number): Promise<SnippetResultReplayResponseDto> {
-    const result = await this.snippetResultRepository.findOne({ where: { id } });
+    const result = await this.snippetResultRepository.findById(id);
     if (!result) throw new BusinessException(ResultError.NOT_FOUND);
 
     const dto = new SnippetResultReplayResponseDto();
@@ -143,28 +108,6 @@ export class SnippetResultService {
     dto.snippetId  = result.snippetId;
     dto.replayData = result.replayData;
     return dto;
-  }
-
-  // 유저별 최고 기록 기준 순위 계산 — 상관 서브쿼리로 각 유저의 최고 WPM과 비교
-  private async calcRank(snippetId: number, myWpm: number): Promise<number> {
-    const raw = await this.snippetResultRepository
-      .createQueryBuilder('r')
-      .select('COUNT(DISTINCT r.userId)', 'count')
-      .where('r.snippetId = :snippetId')
-      .andWhere((qb) => {
-        const sub = qb
-          .subQuery()
-          .select('MAX(s.wpm)')
-          .from(SnippetResult, 's')
-          .where('s.snippetId = :snippetId')
-          .andWhere('s.userId = r.userId')
-          .getQuery();
-        return `(${sub}) > :myWpm`;
-      })
-      .setParameters({ snippetId, myWpm })
-      .getRawOne<{ count: string }>();
-
-    return Number(raw?.count ?? 0) + 1;
   }
 
   // replayData 기반 단어별 타이핑 속도로 Best/Worst Words 계산

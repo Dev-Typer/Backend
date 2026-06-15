@@ -7,9 +7,7 @@ import { User } from 'src/user/user.entity';
 import { GithubProfileDto } from './dto/github-profile.dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './types/jwt-payload.interface';
-import { InjectRepository } from '@nestjs/typeorm';
-import { RefreshToken } from './entity/refresh-token.entity';
-import { DataSource, Repository } from 'typeorm';
+import { AuthRepository } from './auth.repository';
 import jwtConfig from '../config/jwt.config';
 
 @Injectable()
@@ -17,13 +15,10 @@ export class AuthService {
     constructor(
         private userService: UserService,
         private jwtService: JwtService,
-        private dataSource: DataSource,
+        private readonly authRepository: AuthRepository,
 
         @Inject(jwtConfig.KEY)
         private readonly jwtConf: ConfigType<typeof jwtConfig>,
-
-        @InjectRepository(RefreshToken)
-        private refreshTokenRepository: Repository<RefreshToken>,
     ) {}
 
     async findOrCreateUser(profile: GithubProfileDto): Promise<User> {
@@ -45,10 +40,7 @@ export class AuthService {
 
         const expiresAt = new Date(Date.now() + this.jwtConf.refreshExpiresSeconds * 1000);
 
-        await this.dataSource.transaction(async (manager) => {
-            await manager.update(RefreshToken, { userId: user.id, isRevoked: false }, { isRevoked: true });
-            await manager.save(RefreshToken, manager.create(RefreshToken, { token, expiresAt, userId: user.id, isRevoked: false }));
-        });
+        await this.authRepository.revokeAndSave(user.id, token, expiresAt);
 
         return token;
     }
@@ -60,10 +52,7 @@ export class AuthService {
     }
 
     async logout(refreshToken: string, userId: number): Promise<void> {
-        await this.refreshTokenRepository.update(
-            { token: refreshToken, userId },
-            { isRevoked: true },
-        );
+        await this.authRepository.revokeByTokenAndUser(refreshToken, userId);
     }
 
     async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
@@ -73,9 +62,7 @@ export class AuthService {
             throw new BusinessException(AuthError.INVALID_REFRESH_TOKEN);
         }
 
-        const record = await this.refreshTokenRepository.findOne({
-            where: { token: refreshToken, isRevoked: false },
-        });
+        const record = await this.authRepository.findValid(refreshToken);
 
         if (!record) {
             throw new BusinessException(AuthError.REVOKED_REFRESH_TOKEN);

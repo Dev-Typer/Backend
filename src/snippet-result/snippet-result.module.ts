@@ -5,6 +5,7 @@ import { SnippetResultService } from './snippet-result.service';
 import { SnippetResultController } from './snippet-result.controller';
 import { SnippetRankingController } from './snippet-ranking.controller';
 import { SnippetModule } from '../snippet/snippet.module';
+import { SnippetResultRepository } from './snippet-result.repository';
 
 @Module({
     imports: [
@@ -12,7 +13,7 @@ import { SnippetModule } from '../snippet/snippet.module';
         SnippetModule,
     ],
     controllers: [SnippetResultController, SnippetRankingController],
-    providers: [SnippetResultService],
-    exports: [SnippetResultService],
+    providers: [SnippetResultService, SnippetResultRepository],
+    exports: [SnippetResultService, SnippetResultRepository],
 })
 export class SnippetResultModule {}

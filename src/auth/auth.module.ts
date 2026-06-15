@@ -11,6 +11,7 @@ import { UserModule } from '../user/user.module';
 import { RefreshToken } from './entity/refresh-token.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import jwtConfig from '../config/jwt.config';
+import { AuthRepository } from './auth.repository';
 
 @Module({
   imports: [
@@ -27,6 +28,6 @@ import jwtConfig from '../config/jwt.config';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, GithubStrategy, JwtStrategy, AuthScheduler],
+  providers: [AuthService, GithubStrategy, JwtStrategy, AuthScheduler, AuthRepository],
 })
 export class AuthModule {}

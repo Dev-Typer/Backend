@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Snippet } from './snippet.entity';
+import { SnippetRepository } from './snippet.repository';
 import { SnippetQueryDto } from './dto/snippet-query.dto';
 import { SnippetResponseDto } from './dto/snippet-response.dto';
 import { SnippetLanguage } from './enums/snippet-language.enum';
@@ -19,52 +17,34 @@ export interface SnippetListResponse {
 @Injectable()
 export class SnippetService {
     constructor(
-        @InjectRepository(Snippet)
-        private snippetRepository: Repository<Snippet>,
+        private readonly snippetRepository: SnippetRepository,
     ) {}
 
     // 활성화된 스니펫 목록 조회 — isActive: true 고정
     async findAll(query: SnippetQueryDto): Promise<SnippetListResponse> {
         const { language, difficulty, page = 1, size = 10 } = query;
 
-        const qb = this.snippetRepository
-            .createQueryBuilder('snippet')
-            .where('snippet.isActive = true')
-            .orderBy('snippet.createdAt', 'DESC');
-
-        if (language)   qb.andWhere('snippet.language = :language', { language });
-        if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
-
-        const [items, total] = await qb
-            .skip((page - 1) * size)
-            .take(size)
-            .getManyAndCount();
+        const [items, total] = await this.snippetRepository.findActiveList(
+            language,
+            difficulty,
+            page,
+            size,
+        );
 
         return { data: items.map(SnippetResponseDto.from), total, page, size };
     }
 
     // 단건 조회 — 활성화된 스니펫만 반환
     async findOne(id: number): Promise<SnippetResponseDto> {
-        const snippet = await this.snippetRepository.findOne({
-            where: { id, isActive: true },
-        });
+        const snippet = await this.snippetRepository.findActiveById(id);
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
         return SnippetResponseDto.from(snippet);
     }
 
     // 솔로 연습용 — 활성화된 스니펫 중 랜덤 1개 반환
     async findRandom(language?: SnippetLanguage, difficulty?: SnippetDifficulty): Promise<SnippetResponseDto> {
-        const qb = this.snippetRepository
-            .createQueryBuilder('snippet')
-            .where('snippet.isActive = true')
-            .orderBy('RANDOM()');
-
-        if (language)   qb.andWhere('snippet.language = :language', { language });
-        if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
-
-        const snippet = await qb.getOne();
+        const snippet = await this.snippetRepository.findRandom(language, difficulty);
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
         return SnippetResponseDto.from(snippet);
     }
-
 }
