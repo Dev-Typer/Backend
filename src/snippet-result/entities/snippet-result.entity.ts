@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../user/user.entity';
 import { Snippet } from '../../snippet/snippet.entity';
@@ -12,6 +13,7 @@ import { ReplayEvent } from '../types/replay-event.interface';
 import { TypoData } from '../types/typo-data.interface';
 
 @Entity()
+@Index('idx_snippet_result_daily', ['snippetId', 'isDaily', 'createdAt', 'nWpm'])
 export class SnippetResult {
     @PrimaryGeneratedColumn()
     id!: number;
