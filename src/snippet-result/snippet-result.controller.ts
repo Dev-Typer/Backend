@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpStatus, Param, ParseIntPipe, Post, Req, Res, UseGuards } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import { Body, Controller, Get, HttpStatus, Param, ParseIntPipe, Post, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { SnippetResultService } from './snippet-result.service';
 import { SaveSnippetResultDto } from './dto/save-snippet-result.dto';
 import { SnippetResultResponseDto } from './dto/snippet-result-response.dto';
@@ -8,6 +8,8 @@ import { SnippetResultReplayResponseDto } from './dto/snippet-result-replay-resp
 import { OptionalJwtGuard } from '../common/guards/optional-jwt.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiResponse } from '../common/dto/api-response';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtUser } from '../common/types/jwt-user.type';
 
 @Controller('/api/snippet-results')
 export class SnippetResultController {
@@ -18,12 +20,11 @@ export class SnippetResultController {
   @Post()
   @UseGuards(OptionalJwtGuard)
   async save(
-    @Req() req: Request & { user?: { userId: number } },
+    @CurrentUser() user: JwtUser | null,
     @Res({ passthrough: true }) res: Response,
     @Body() dto: SaveSnippetResultDto,
   ): Promise<ApiResponse<SnippetResultResponseDto | null>> {
-    const userId = req.user?.userId ?? null;
-    const result = await this.snippetResultService.save(dto, userId);
+    const result = await this.snippetResultService.save(dto, user?.userId ?? null);
 
     if (!result) {
       res.status(HttpStatus.OK);
@@ -40,9 +41,9 @@ export class SnippetResultController {
   @UseGuards(JwtAuthGuard)
   async findStats(
     @Param('id', ParseIntPipe) id: number,
-    @Req() req: Request & { user: { userId: number } },
+    @CurrentUser() user: JwtUser,
   ): Promise<ApiResponse<SnippetResultStatsResponseDto>> {
-    const result = await this.snippetResultService.findStats(id, req.user.userId);
+    const result = await this.snippetResultService.findStats(id, user.userId);
     return ApiResponse.success(result, HttpStatus.OK);
   }
 

@@ -1,24 +1,23 @@
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { UserRepository } from './user.repository';
 import { User } from './user.entity';
 import { GithubProfileDto } from '../auth/dto/github-profile.dto';
 
+@Injectable()
 export class UserService {
     constructor(
-        @InjectRepository(User)
-        private userRepository: Repository<User>, 
+        private readonly userRepository: UserRepository,
     ) {}
 
     async findByGithubId(githubId: string): Promise<User | null> {
-        return this.userRepository.findOne({ where: { githubId }})
+        return this.userRepository.findByGithubId(githubId);
     }
 
     async findById(id: number): Promise<User | null> {
-        return this.userRepository.findOne({ where: { id } });
+        return this.userRepository.findById(id);
     }
 
     async create(profile: GithubProfileDto): Promise<User> {
-        const user = this.userRepository.create(profile);
-        return this.userRepository.save(user);
+        return this.userRepository.create(profile);
     }
 }

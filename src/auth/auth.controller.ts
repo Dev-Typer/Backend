@@ -1,6 +1,6 @@
 ﻿import { Controller, Get, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { JwtUser } from '../common/types/jwt-user.type';
+import type { JwtUser } from '../common/types/jwt-user.type';
 import type { ConfigType } from '@nestjs/config';
 import { ApiResponse } from '../common/dto/api-response';
 import { BusinessException } from '../common/exceptions/business.exception';
@@ -80,11 +80,12 @@ export class AuthController {
   @Post('/logout')
   @UseGuards(JwtAuthGuard)
   async logout(
-    @Req() req: Request & { cookies: Record<string, string>; user: { userId: number } },
+    @CurrentUser() user: JwtUser,
+    @Req() req: Request & { cookies: Record<string, string> },
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
     const token = req.cookies['refreshToken'];
-    if (token) await this.authService.logout(token, req.user.userId);
+    if (token) await this.authService.logout(token, user.userId);
 
     const cookieOptions = {
       httpOnly: true,
@@ -97,8 +98,8 @@ export class AuthController {
 
   @Get('/me')
   @UseGuards(JwtAuthGuard)
-  getMe(@Req() req: Request & { user: { userId: number; username: string } }): ApiResponse<{ userId: number; username: string }> {
-    return ApiResponse.success(req.user, HttpStatus.OK);
+  getMe(@CurrentUser() user: JwtUser): ApiResponse<JwtUser> {
+    return ApiResponse.success(user, HttpStatus.OK);
   }
 }
 

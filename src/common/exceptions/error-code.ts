@@ -79,3 +79,11 @@ export const ResultError = {
     message: '접근 권한이 없습니다',
   },
 } as const satisfies Record<string, ErrorCode>;
+
+export const DailyError = {
+  NOT_FOUND: {
+    code: 'DAILY_001',
+    statusCode: HttpStatus.NOT_FOUND,
+    message: '오늘의 챌린지가 존재하지 않습니다',
+  },
+} as const satisfies Record<string, ErrorCode>;
