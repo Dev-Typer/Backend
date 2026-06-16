@@ -3,10 +3,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SnippetResult } from './entities/snippet-result.entity';
 
-export interface LeaderboardRow {
+export interface UserRankInfo {
+    rank: number;
+    userId: number;
+    nWpm: string; // TypeORM decimal → string
+}
+
+export interface NearbyRow {
+    rank: number;
     userId: number;
     username: string;
-    nWpm: string; // TypeORM decimal → string으로 반환됨
+    nWpm: string;
 }
 
 export interface FullLeaderboardRow {
@@ -41,26 +48,70 @@ export class SnippetResultRepository {
         return this.repo.save(this.repo.create(data));
     }
 
-    // 오늘 daily 리더보드 — 유저별 최고 nWpm 기준 정렬
-    async findLeaderboard(
+    // 특정 유저의 순위 + 최고 nWpm — SQL RANK() 윈도우 함수로 단일 행 반환
+    async findUserRankInfo(
+        snippetId: number,
+        userId: number,
+        start: Date,
+        end: Date,
+    ): Promise<UserRankInfo | null> {
+        const rows: (UserRankInfo & { rank: string })[] = await this.repo.query(`
+            SELECT rank, "userId", "nWpm"
+            FROM (
+                SELECT
+                    RANK() OVER (ORDER BY "nWpm" DESC, accuracy DESC, "durationSec" ASC) AS rank,
+                    "userId",
+                    "nWpm"
+                FROM (
+                    SELECT DISTINCT ON (r."userId")
+                        r."userId", r."nWpm", r.accuracy, r."durationSec"
+                    FROM snippet_result r
+                    WHERE r."snippetId" = $1
+                      AND r."isDaily" = true
+                      AND r."createdAt" >= $2
+                      AND r."createdAt" < $3
+                    ORDER BY r."userId", r."nWpm" DESC, r.accuracy DESC, r."durationSec" ASC
+                ) best
+            ) ranked
+            WHERE "userId" = $4
+        `, [snippetId, start, end, userId]);
+
+        if (!rows.length) return null;
+        return { rank: Number(rows[0].rank), userId: rows[0].userId, nWpm: rows[0].nWpm };
+    }
+
+    // 제출자 순위 기준 위 2명·본인·아래 2명 — SQL RANK()로 최대 5행만 반환
+    async findNearbyUsers(
         snippetId: number,
         start: Date,
         end: Date,
-    ): Promise<LeaderboardRow[]> {
-        return this.repo
-            .createQueryBuilder('r')
-            .select('r.userId', 'userId')
-            .addSelect('u.username', 'username')
-            .addSelect('MAX(r.nWpm)', 'nWpm')
-            .innerJoin('r.user', 'u')
-            .where('r.snippetId = :snippetId', { snippetId })
-            .andWhere('r.isDaily = true')
-            .andWhere('r.createdAt >= :start', { start })
-            .andWhere('r.createdAt < :end', { end })
-            .groupBy('r.userId')
-            .addGroupBy('u.username')
-            .orderBy('MAX(r.nWpm)', 'DESC')
-            .getRawMany<LeaderboardRow>();
+        userRank: number,
+    ): Promise<NearbyRow[]> {
+        const rows: (NearbyRow & { rank: string })[] = await this.repo.query(`
+            SELECT rank, "userId", username, "nWpm"
+            FROM (
+                SELECT
+                    RANK() OVER (ORDER BY best."nWpm" DESC, best.accuracy DESC, best."durationSec" ASC) AS rank,
+                    best."userId",
+                    u.username,
+                    best."nWpm"
+                FROM (
+                    SELECT DISTINCT ON (r."userId")
+                        r."userId", r."nWpm", r.accuracy, r."durationSec"
+                    FROM snippet_result r
+                    WHERE r."snippetId" = $1
+                      AND r."isDaily" = true
+                      AND r."createdAt" >= $2
+                      AND r."createdAt" < $3
+                    ORDER BY r."userId", r."nWpm" DESC, r.accuracy DESC, r."durationSec" ASC
+                ) best
+                JOIN "user" u ON u.id = best."userId"
+            ) ranked
+            WHERE rank BETWEEN GREATEST(1, $4 - 2) AND $4 + 2
+            ORDER BY rank
+        `, [snippetId, start, end, userRank]);
+
+        return rows.map(r => ({ ...r, rank: Number(r.rank) }));
     }
 
     // 오늘 daily 전체 리더보드 — DISTINCT ON으로 유저별 최고 nWpm 행만 추출, 상위 100위

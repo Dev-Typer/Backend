@@ -35,8 +35,8 @@ export class DailyChallengeService {
         const challenge = await this.getSnippet();
         const { start, end } = this.getTodayUtcRange(challenge.date);
 
-        const beforeLeaderboard = await this.snippetResultRepository.findLeaderboard(
-            challenge.snippetId, start, end,
+        const beforeRankInfo = await this.snippetResultRepository.findUserRankInfo(
+            challenge.snippetId, userId, start, end,
         );
 
         const nWpm = dto.wpm * (dto.accuracy / 100);
@@ -54,57 +54,40 @@ export class DailyChallengeService {
         });
         await this.snippetRepository.incrementStats(challenge.snippetId, dto.wpm);
 
-        const afterLeaderboard = await this.snippetResultRepository.findLeaderboard(
-            challenge.snippetId, start, end,
+        const afterRankInfo = await this.snippetResultRepository.findUserRankInfo(
+            challenge.snippetId, userId, start, end,
         );
-        
-        // 기존 데이터
-        const beforeEntry = beforeLeaderboard.find(row => row.userId === userId);
-        const afterEntry = afterLeaderboard.find(row => row.userId === userId);
-        if (!afterEntry) throw new BusinessException(DailyError.NOT_FOUND);
+        if (!afterRankInfo) throw new BusinessException(DailyError.NOT_FOUND);
 
-        // 이후 데이터가 몇번째 row인지 (0-based index) → 랭킹은 1부터 시작하므로 +1
-        const afterRank  = afterLeaderboard.indexOf(afterEntry) + 1;
-
-        // 기존 데이터가 없으면 첫 제출이므로 beforeRank, rankDelta는 undefined
-        const beforeRank = beforeEntry ? beforeLeaderboard.indexOf(beforeEntry) + 1 : undefined;
-
-        // 기존 데이터가 있으면 isFirst = false → rankDelta 계산 가능, 없으면 isFirst = true → rankDelta는 undefined
-        const isFirst    = !beforeEntry;
-
-        // rankDelta는 기존 데이터가 있을 때만 계산 — 첫 제출은 순위 변동 수치 없음
+        const afterRank  = afterRankInfo.rank;
+        const beforeRank = beforeRankInfo?.rank;
+        const isFirst    = !beforeRankInfo;
         const rankDelta  = isFirst ? undefined : beforeRank! - afterRank;
-
-        // rankChange는 첫 제출 여부와 rankDelta에 따라 결정
         const rankChange = isFirst        ? RankChangeStatus.FIRST_ATTEMPT
                          : rankDelta! > 0 ? RankChangeStatus.UP
                          : rankDelta! < 0 ? RankChangeStatus.DOWN
                          :                  RankChangeStatus.SAME;
 
-        // 오늘 개인 최고 기록 갱신 여부 — 기존 데이터가 없으면 무조건 NEW_BEST, 기존 데이터가 있으면 nWpm 비교
-        const bestStatus = !beforeEntry || Number(afterEntry.nWpm) > Number(beforeEntry.nWpm)
+        const bestStatus = !beforeRankInfo || Number(afterRankInfo.nWpm) > Number(beforeRankInfo.nWpm)
             ? BestStatus.NEW_BEST
             : BestStatus.NOT_BEST;
 
-        // 랭킹 기준으로 위 2명·본인·아래 2명 추출 — afterRank 기준으로 상하 2명씩, 최대 5명
-        const nearbyStart  = Math.max(0, afterRank - 3);
-
-        // afterRank는 1-based이므로 nearbyStart도 1-based로 맞춰주기 위해 -1 → slice는 0-based이므로 결과적으로는 afterRank 기준으로 위 2명·본인·아래 2명 추출
-        const nearbyUsers: NearbyUserItem[] = afterLeaderboard
-            .slice(nearbyStart, afterRank + 2)
-            .map((row, i) => {
-                const item    = new NearbyUserItem();
-                item.rank     = nearbyStart + i + 1;
-                item.userId   = row.userId;
-                item.username = row.username;
-                item.nWpm     = Number(row.nWpm);
-                item.relation = row.userId === userId ? NearbyUserRelation.ME : NearbyUserRelation.OTHER;
-                return item;
-            });
+        const nearbyRows = await this.snippetResultRepository.findNearbyUsers(
+            challenge.snippetId, start, end, afterRank,
+        );
+        const nearbyUsers: NearbyUserItem[] = nearbyRows.map(row => {
+            const item    = new NearbyUserItem();
+            item.rank     = row.rank;
+            item.userId   = row.userId;
+            item.username = row.username;
+            item.nWpm     = Number(row.nWpm);
+            item.relation = row.userId === userId ? NearbyUserRelation.ME : NearbyUserRelation.OTHER;
+            return item;
+        });
 
         return new SubmitDailyChallengeResponseDto({
             resultId: savedResult.id,
-            nWpm: Number(afterEntry.nWpm), // DB decimal 저장값 기준으로 통일
+            nWpm: Number(afterRankInfo.nWpm),
             afterRank,
             beforeRank,
             rankDelta,
