@@ -1,11 +1,11 @@
-import { SnippetLanguage } from '../enums/snippet-language.enum';
+import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
 import { Snippet } from '../snippet.entity';
 
 export class SnippetResponseDto {
   id!: number;
   title!: string;
-  language!: SnippetLanguage;
+  language!: Language;
   difficulty!: SnippetDifficulty;
   content!: string;
   source!: string | null;

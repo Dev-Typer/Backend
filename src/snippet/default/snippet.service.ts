@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SnippetRepository } from './snippet.repository';
 import { SnippetQueryDto } from '../dto/snippet-query.dto';
 import { SnippetResponseDto } from '../dto/snippet-response.dto';
-import { SnippetLanguage } from '../enums/snippet-language.enum';
+import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { SnippetError } from '../../common/exceptions/error-code';
@@ -42,7 +42,7 @@ export class SnippetService {
     }
 
     // 솔로 연습용 — 활성화된 스니펫 중 랜덤 1개 반환
-    async findRandom(language?: SnippetLanguage, difficulty?: SnippetDifficulty): Promise<SnippetResponseDto> {
+    async findRandom(language?: Language, difficulty?: SnippetDifficulty): Promise<SnippetResponseDto> {
         const snippet = await this.snippetRepository.findRandom(language, difficulty);
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
         return SnippetResponseDto.from(snippet);

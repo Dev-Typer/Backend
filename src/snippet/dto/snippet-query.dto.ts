@@ -1,12 +1,12 @@
 import { IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { SnippetLanguage } from '../enums/snippet-language.enum';
+import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
 
 export class SnippetQueryDto {
   @IsOptional()
-  @IsEnum(SnippetLanguage)
-  language?: SnippetLanguage;
+  @IsEnum(Language)
+  language?: Language;
 
   @IsOptional()
   @IsEnum(SnippetDifficulty)
@@ -29,8 +29,8 @@ export class SnippetQueryDto {
 // 랜덤 스니펫 조회용 — 언어/난이도 필터만
 export class RandomSnippetQueryDto {
   @IsOptional()
-  @IsEnum(SnippetLanguage)
-  language?: SnippetLanguage;
+  @IsEnum(Language)
+  language?: Language;
 
   @IsOptional()
   @IsEnum(SnippetDifficulty)

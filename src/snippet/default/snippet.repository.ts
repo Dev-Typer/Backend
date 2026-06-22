@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Snippet } from '../snippet.entity';
-import { SnippetLanguage } from '../enums/snippet-language.enum';
+import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class SnippetRepository {
 
     // 활성화된 스니펫 목록 — 페이지네이션 + 필터
     async findActiveList(
-        language?: SnippetLanguage,
+        language?: Language,
         difficulty?: SnippetDifficulty,
         page = 1,
         size = 10,
@@ -44,7 +44,7 @@ export class SnippetRepository {
     }
 
     // 랜덤 1개 조회
-    async findRandom(language?: SnippetLanguage, difficulty?: SnippetDifficulty): Promise<Snippet | null> {
+    async findRandom(language?: Language, difficulty?: SnippetDifficulty): Promise<Snippet | null> {
         const qb = this.repo
             .createQueryBuilder('snippet')
             .where('snippet.isActive = true')
