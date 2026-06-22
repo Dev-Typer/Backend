@@ -44,11 +44,17 @@ export class SnippetResult {
     @Column()
     durationSec!: number;
 
-    @Column({ type: 'jsonb', default: [] })
-    typos!: TypoData[];
-
     @Column({ type: 'decimal', precision: 10, scale: 4, default: 0 })
     nWpm!: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 4 })
+    core!: number;          // 이번 플레이 CORE
+
+    @Column({ type: 'decimal', precision: 10, scale: 4 })
+    rawCore!: number;       // 오타 무시했을 때 CORE (참고용)
+
+    @Column({ type: 'jsonb', default: [] })
+    typos!: TypoData[];
 
     @Column({ default: false})
     isDaily!: boolean;
