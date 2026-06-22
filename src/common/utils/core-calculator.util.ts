@@ -47,6 +47,29 @@ export function calculateCore(
   return nWpm * difficultyWeight * lengthWeight;
 }
 
+// Total CORE 계산 파라미터
+export const TOTAL_CORE_TOP_N = 100;
+export const TOTAL_CORE_DECAY_RATE = 0.97;
+
+/**
+ * 스니펫별 최고 core 값들을 받아
+ * 상위 N개에 감쇠 가중치를 적용한 Total CORE를 계산한다.
+ *
+ * Total CORE = Σ floor(core_i × decayRate^i)   (i는 0부터 시작)
+ */
+export function calculateTotalCore(
+  bestCores: number[],
+  topN: number = TOTAL_CORE_TOP_N,
+  decayRate: number = TOTAL_CORE_DECAY_RATE,
+): number {
+  const sorted = [...bestCores].sort((a, b) => b - a);
+  const top = sorted.slice(0, topN);
+
+  return top.reduce((sum, core, index) => {
+    return sum + Math.floor(core * Math.pow(decayRate, index));
+  }, 0);
+}
+
 /**
  * RawCore 계산
  * RawCore = RawWPM × 난이도가중치 × 길이가중치
