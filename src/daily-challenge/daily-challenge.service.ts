@@ -6,6 +6,7 @@ import { SnippetResultRepository } from '../snippet-result/snippet-result.reposi
 import { DailyChallengeResponseDto } from './dto/daily-challenge-response.dto';
 import { SubmitDailyChallengeDto } from './dto/submit-daily-challenge.dto';
 import { ChallengeLeaderboardResponseDto, LeaderboardItem, MyRankStatus } from './dto/challenge-leaderboard-response.dto';
+import { calculateCore, calculateRawCore, calculateNWpm } from '../common/utils/core-calculator.util';
 import {
     BestStatus,
     NearbyUserItem,
@@ -39,7 +40,20 @@ export class DailyChallengeService {
             challenge.snippetId, userId, start, end,
         );
 
-        const nWpm = dto.wpm * (dto.accuracy / 100);
+        const nWpm = calculateNWpm(dto.wpm, dto.accuracy);
+        const core = calculateCore(
+        dto.wpm,
+        dto.accuracy,
+        challenge.snippet.difficulty,
+        challenge.snippet.content.length,
+        );
+
+        const rawCore = calculateRawCore(
+        dto.rawWpm,
+        challenge.snippet.difficulty,
+        challenge.snippet.content.length,
+        );
+
         const savedResult = await this.snippetResultRepository.save({
             userId,
             snippetId: challenge.snippetId,
@@ -48,6 +62,8 @@ export class DailyChallengeService {
             accuracy: dto.accuracy,
             durationSec: dto.durationSec,
             nWpm,
+            core,
+            rawCore,
             typos: dto.typos ?? [],
             replayData: dto.replayData ?? [],
             isDaily: true,
