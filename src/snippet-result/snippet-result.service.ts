@@ -10,6 +10,7 @@ import { SnippetRankingResponseDto, SnippetRankingItemDto } from '../snippet/dto
 import { BusinessException } from '../common/exceptions/business.exception';
 import { SnippetError, ResultError } from '../common/exceptions/error-code';
 import { SnippetResult } from './entities/snippet-result.entity';
+import { calculateCore, calculateRawCore, calculateNWpm } from '../common/utils/core-calculator.util';
 
 @Injectable()
 export class SnippetResultService {
@@ -31,6 +32,19 @@ export class SnippetResultService {
 
     if (!userId) return null;
 
+    const nWpm = calculateNWpm(dto.wpm, dto.accuracy);
+    const core = calculateCore(
+      dto.wpm,
+      dto.accuracy,
+      snippet.difficulty,
+      snippet.content.length,
+    );
+
+    const rawCore = calculateRawCore(
+      dto.rawWpm,
+      snippet.difficulty,
+      snippet.content.length,
+    );
     const saved = await this.snippetResultRepository.save({
       userId,
       snippetId: dto.snippetId,
@@ -39,7 +53,9 @@ export class SnippetResultService {
       accuracy: dto.accuracy,
       durationSec: dto.durationSec,
       typos: dto.typos ?? [],
-      nWpm: dto.wpm * (dto.accuracy / 100),
+      nWpm,
+      core,
+      rawCore,
       isDaily,
       replayData: dto.replayData ?? [],
     });
