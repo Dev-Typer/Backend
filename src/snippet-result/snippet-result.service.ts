@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Transactional } from 'typeorm-transactional';
 import { SnippetResultRepository } from './snippet-result.repository';
-import { SnippetRepository } from '../snippet/snippet.repository';
+import { SnippetRepository } from '../snippet/default/snippet.repository';
 import { SaveSnippetResultDto } from './dto/save-snippet-result.dto';
 import { SnippetResultResponseDto } from './dto/snippet-result-response.dto';
 import { SnippetResultStatsResponseDto, WpmGraphPoint, WordStats } from './dto/snippet-result-stats-response.dto';

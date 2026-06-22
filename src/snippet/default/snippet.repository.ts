@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Snippet } from './snippet.entity';
-import { SnippetLanguage } from './enums/snippet-language.enum';
-import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
+import { Snippet } from '../snippet.entity';
+import { SnippetLanguage } from '../enums/snippet-language.enum';
+import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
 
 @Injectable()
 export class SnippetRepository {

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { SnippetAdminRepository } from './snippet-admin.repository';
-import { CreateSnippetDto } from './dto/create-snippet.dto';
-import { UpdateSnippetDto } from './dto/update-snippet.dto';
-import { SnippetResponseDto } from './dto/snippet-response.dto';
-import { BusinessException } from '../common/exceptions/business.exception';
-import { SnippetError } from '../common/exceptions/error-code';
+import { CreateSnippetDto } from '../dto/create-snippet.dto';
+import { UpdateSnippetDto } from '../dto/update-snippet.dto';
+import { SnippetResponseDto } from '../dto/snippet-response.dto';
+import { BusinessException } from '../../common/exceptions/business.exception';
+import { SnippetError } from '../../common/exceptions/error-code';
 
 @Injectable()
 export class SnippetAdminService {

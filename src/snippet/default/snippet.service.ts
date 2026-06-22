@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { SnippetRepository } from './snippet.repository';
-import { SnippetQueryDto } from './dto/snippet-query.dto';
-import { SnippetResponseDto } from './dto/snippet-response.dto';
-import { SnippetLanguage } from './enums/snippet-language.enum';
-import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
-import { BusinessException } from '../common/exceptions/business.exception';
-import { SnippetError } from '../common/exceptions/error-code';
+import { SnippetQueryDto } from '../dto/snippet-query.dto';
+import { SnippetResponseDto } from '../dto/snippet-response.dto';
+import { SnippetLanguage } from '../enums/snippet-language.enum';
+import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
+import { BusinessException } from '../../common/exceptions/business.exception';
+import { SnippetError } from '../../common/exceptions/error-code';
 
 export interface SnippetListResponse {
     data: SnippetResponseDto[];

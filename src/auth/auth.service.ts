@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { AuthError } from '../common/exceptions/error-code';
-import { UserService } from 'src/user/user.service';
+import { UserRepository } from 'src/user/user.repository';
 import { User } from 'src/user/user.entity';
 import { GithubProfileDto } from './dto/github-profile.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -13,7 +13,7 @@ import jwtConfig from '../config/jwt.config';
 @Injectable()
 export class AuthService {
     constructor(
-        private userService: UserService,
+        private userRepository: UserRepository,
         private jwtService: JwtService,
         private readonly authRepository: AuthRepository,
 
@@ -22,9 +22,9 @@ export class AuthService {
     ) {}
 
     async findOrCreateUser(profile: GithubProfileDto): Promise<User> {
-        let user = await this.userService.findByGithubId(profile.githubId);
+        let user = await this.userRepository.findByGithubId(profile.githubId);
         if (!user) {
-            user = await this.userService.create(profile);
+            user = await this.userRepository.create(profile);
         }
         return user;
     }
@@ -72,7 +72,7 @@ export class AuthService {
             throw new BusinessException(AuthError.EXPIRED_REFRESH_TOKEN);
         }
 
-        const user = await this.userService.findById(record.userId);
+        const user = await this.userRepository.findById(record.userId);
         if (!user) throw new BusinessException(AuthError.USER_NOT_FOUND);
 
         return this.issueTokens(user);

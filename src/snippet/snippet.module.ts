@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Snippet } from './snippet.entity';
-import { SnippetService } from './snippet.service';
-import { SnippetController } from './snippet.controller';
-import { SnippetAdminService } from './snippet-admin.service';
-import { SnippetAdminController } from './snippet-admin.controller';
-import { SnippetRepository } from './snippet.repository';
-import { SnippetAdminRepository } from './snippet-admin.repository';
+import { SnippetService } from './default/snippet.service';
+import { SnippetController } from './default/snippet.controller';
+import { SnippetAdminService } from './admin/snippet-admin.service';
+import { SnippetAdminController } from './admin/snippet-admin.controller';
+import { SnippetRepository } from './default/snippet.repository';
+import { SnippetAdminRepository } from './admin/snippet-admin.repository';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Snippet])],
