@@ -25,6 +25,9 @@ export class AuthService {
         let user = await this.userRepository.findByGithubId(profile.githubId);
         if (!user) {
             user = await this.userRepository.create(profile);
+        } else if (!user.profileUrl && profile.avatarUrl) {
+            await this.userRepository.updateProfileUrl(user.id, profile.avatarUrl);
+            user.profileUrl = profile.avatarUrl;
         }
         return user;
     }
