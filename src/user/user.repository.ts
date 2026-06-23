@@ -20,7 +20,12 @@ export class UserRepository {
     }
 
     async create(profile: GithubProfileDto): Promise<User> {
-        const user = this.repo.create(profile);
+        const user = this.repo.create({
+            githubId:   profile.githubId,
+            username:   profile.username,
+            email:      profile.email,
+            profileUrl: profile.avatarUrl ?? null,
+        });
         return this.repo.save(user);
     }
 

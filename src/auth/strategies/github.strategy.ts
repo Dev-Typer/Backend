@@ -27,9 +27,10 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     profile: any,
   ): Promise<User> {
     return this.authService.findOrCreateUser({
-      githubId: String(profile.id),
-      username: profile.username,
-      email: profile.emails?.[0]?.value ?? undefined,
+      githubId:  String(profile.id),
+      username:  profile.username,
+      email:     profile.emails?.[0]?.value ?? undefined,
+      avatarUrl: profile.photos?.[0]?.value ?? undefined,
     });
   }
 }
