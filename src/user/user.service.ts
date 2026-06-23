@@ -3,6 +3,8 @@ import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
 import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-language.dto';
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
+import type { UserStreakDto, StreakDayEntry } from './dto/user-streak.dto';
+import type { UserWpmHistoryDto } from './dto/user-wpm-history.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
 import { UserRepository } from './user.repository';
 import { R2StorageService, ImageFile } from 'src/common/storage/r2.service';
@@ -70,6 +72,73 @@ export class UserService {
         }
 
         await this.userRepository.updateBannerUrl(userId, null);
+    }
+
+    // ─── Streak ───────────────────────────────────────────────────────────────
+
+    async getMeStreak(userId: number, year?: number, type?: string): Promise<UserStreakDto> {
+        const isRecent = type === 'recent';
+
+        const today     = new Date();
+        const todayStr  = today.toISOString().slice(0, 10);
+        const startStr  = isRecent
+            ? new Date(today.getTime() - 364 * 86400 * 1000).toISOString().slice(0, 10)
+            : `${year ?? today.getFullYear()}-01-01`;
+        const endStr    = isRecent
+            ? todayStr
+            : `${year ?? today.getFullYear()}-12-31`;
+
+        const [dayRows, longest] = await Promise.all([
+            this.snippetResultRepository.getStreakDayData(userId, startStr, endStr),
+            this.snippetResultRepository.getLongestStreak(userId),
+        ]);
+
+        const submittedSet = new Map(dayRows.map(r => [r.day, Number(r.wpm)]));
+
+        // 날짜 범위 전체를 순회해 yearData 생성
+        const yearData: StreakDayEntry[] = [];
+        const cursor = new Date(startStr);
+        const endDate = new Date(endStr);
+
+        while (cursor <= endDate) {
+            const dateStr = cursor.toISOString().slice(0, 10);
+            const wpm     = submittedSet.get(dateStr) ?? null;
+            yearData.push({ date: dateStr, submitted: wpm !== null, wpm });
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        // current: 어제부터 역순으로 연속 제출일 수
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        let current = 0;
+        const check = new Date(yesterday);
+        while (submittedSet.has(check.toISOString().slice(0, 10))) {
+            current++;
+            check.setDate(check.getDate() - 1);
+        }
+
+        return {
+            userId,
+            type:     isRecent ? 'recent' : 'year',
+            year:     isRecent ? null : (year ?? today.getFullYear()),
+            current,
+            longest,
+            yearData,
+        };
+    }
+
+    // ─── WPM 추이 ─────────────────────────────────────────────────────────────
+
+    async getMeWpmHistory(userId: number): Promise<UserWpmHistoryDto> {
+        const MONTHS = 6;
+        const rows = await this.snippetResultRepository.getWpmMonthlyHistory(userId, MONTHS);
+
+        const results = rows.map(row => ({
+            month:   row.month,
+            avgWpm:  Number(row.avg_wpm),
+        }));
+
+        return { userId, range: `${MONTHS}m`, results };
     }
 
     // ─── CORE ─────────────────────────────────────────────────────────────────
