@@ -17,6 +17,11 @@ function isAllowedMimeType(mime: string): mime is AllowedMimeType {
     return (ALLOWED_MIME_TYPES as readonly string[]).includes(mime);
 }
 
+export interface ImageFile {
+    mimetype: string;
+    buffer: Buffer;
+}
+
 export interface UploadResult {
     publicUrl: string;
     key: string;
@@ -45,7 +50,7 @@ export class R2StorageService {
     async upload(
         folder: 'profile' | 'banner',
         userId: number,
-        file: Express.Multer.File,
+        file: ImageFile,
     ): Promise<UploadResult> {
         const mimeType = file.mimetype;
 

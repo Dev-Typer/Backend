@@ -5,11 +5,12 @@ import { UserService } from './user.service';
 import { UserRepository } from './user.repository';
 import { UserController } from './user.controller';
 import { SnippetResultModule } from '../snippet-result/snippet-result.module';
+import { R2StorageService } from '../common/storage/r2.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User]), SnippetResultModule],
   controllers: [UserController],
-  providers: [UserService, UserRepository],
+  providers: [UserService, UserRepository, R2StorageService],
   exports: [UserService, UserRepository],
 })
 export class UserModule {}

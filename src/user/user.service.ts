@@ -2,14 +2,77 @@ import { Injectable } from '@nestjs/common';
 import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
 import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-language.dto';
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
+import { UserProfileDto } from './dto/user-profile.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
+import { UserRepository } from './user.repository';
+import { R2StorageService, ImageFile } from 'src/common/storage/r2.service';
 import { Language } from 'src/common/types/language.type';
+import { BusinessException } from 'src/common/exceptions/business.exception';
+import { UserError } from 'src/common/exceptions/error-code';
 
 @Injectable()
 export class UserService {
     constructor(
         private readonly snippetResultRepository: SnippetResultRepository,
+        private readonly userRepository: UserRepository,
+        private readonly r2: R2StorageService,
     ) {}
+
+    // ─── 프로필 조회 ───────────────────────────────────────────────────────────
+
+    async getMeProfile(userId: number): Promise<UserProfileDto> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+        return UserProfileDto.from(user);
+    }
+
+    // ─── 이미지 업로드/삭제 ────────────────────────────────────────────────────
+
+    async uploadProfileImage(userId: number, file: ImageFile): Promise<{ profileUrl: string }> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+
+        const { publicUrl } = await this.r2.upload('profile', userId, file);
+
+        await this.userRepository.updateProfileUrl(userId, publicUrl);
+
+        return { profileUrl: publicUrl };
+    }
+
+    async deleteProfileImage(userId: number): Promise<void> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+
+        if (user.profileUrl) {
+            await this.r2.delete(this.r2.extractKey(user.profileUrl));
+        }
+
+        await this.userRepository.updateProfileUrl(userId, null);
+    }
+
+    async uploadBannerImage(userId: number, file: ImageFile): Promise<{ bannerUrl: string }> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+
+        const { publicUrl } = await this.r2.upload('banner', userId, file);
+
+        await this.userRepository.updateBannerUrl(userId, publicUrl);
+
+        return { bannerUrl: publicUrl };
+    }
+
+    async deleteBannerImage(userId: number): Promise<void> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+
+        if (user.bannerUrl) {
+            await this.r2.delete(this.r2.extractKey(user.bannerUrl));
+        }
+
+        await this.userRepository.updateBannerUrl(userId, null);
+    }
+
+    // ─── CORE ─────────────────────────────────────────────────────────────────
 
     async getMyCoreInfo(userId: number): Promise<UserCoreDto> {
         const results = await this.snippetResultRepository.getTop100BestCoresByUser(userId);
