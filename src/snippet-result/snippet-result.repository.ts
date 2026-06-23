@@ -214,7 +214,7 @@ export class SnippetResultRepository {
         return this.repo.query(`
             WITH months AS (
                 SELECT generate_series(
-                    date_trunc('month', NOW() - ($2 - 1 || ' months')::interval),
+                    date_trunc('month', NOW()) - ($2::int - 1) * INTERVAL '1 month',
                     date_trunc('month', NOW()),
                     INTERVAL '1 month'
                 )::date AS month_start

@@ -38,7 +38,7 @@ export class UserService {
         const rows = await this.snippetResultRepository.getCoreHistoryByMonth(userId, MONTHS);
 
         const points: CoreHistoryPoint[] = rows.map(row => ({
-            date:      row.month_start,
+            date:      String(row.month_start).slice(0, 10),
             totalCore: Math.floor(Number(row.total_core)),
         }));
 
