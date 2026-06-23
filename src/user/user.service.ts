@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
 import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-language.dto';
+import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
-import { calculateTotalCore } from 'src/common/utils/core-calculator.util';
 import { Language } from 'src/common/types/language.type';
 
 @Injectable()
@@ -24,7 +24,7 @@ export class UserService {
         }
 
         const snippetList = results.map(r => UserSnippetInfo.from(r));
-        const totalCore   = calculateTotalCore(snippetList.map(s => s.core));
+        const totalCore   = snippetList.reduce((sum, s) => sum + s.core, 0);
 
         return UserCoreDto.builder()
             .userId(userId)
@@ -54,5 +54,17 @@ export class UserService {
         });
 
         return { userId, byLanguage };
+    }
+
+    async getMyCoreHistory(userId: number): Promise<UserCoreHistoryDto> {
+        const MONTHS = 6;
+        const rows = await this.snippetResultRepository.getCoreHistoryByMonth(userId, MONTHS);
+
+        const points: CoreHistoryPoint[] = rows.map(row => ({
+            date:      String(row.month_start).slice(0, 10),
+            totalCore: Math.floor(Number(row.total_core)),
+        }));
+
+        return { userId, range: `${MONTHS}m`, points };
     }
 }

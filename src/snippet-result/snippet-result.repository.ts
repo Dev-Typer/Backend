@@ -221,4 +221,33 @@ export class SnippetResultRepository {
         const resultMap = new Map(results.map(r => [r.id, r]));
         return ids.map(id => resultMap.get(id)!).filter(Boolean);
     }
+
+    // 월별 누적 Total CORE 이력 — LATERAL JOIN으로 6개월 단일 쿼리 처리
+    async getCoreHistoryByMonth(
+        userId: number,
+        months: number,
+    ): Promise<{ month_start: string; total_core: string }[]> {
+        return this.repo.query(`
+            WITH months AS (
+                SELECT generate_series(
+                    date_trunc('month', NOW()) - ($2::int - 1) * INTERVAL '1 month',
+                    date_trunc('month', NOW()),
+                    INTERVAL '1 month'
+                )::date AS month_start
+            )
+            SELECT
+                m.month_start,
+                COALESCE(SUM(best.core::numeric), 0) AS total_core
+            FROM months m
+            LEFT JOIN LATERAL (
+                SELECT DISTINCT ON (sr."snippetId") sr.core
+                FROM snippet_result sr
+                WHERE sr."userId" = $1
+                  AND sr."createdAt" < (m.month_start + INTERVAL '1 month')::timestamptz
+                ORDER BY sr."snippetId", sr.core DESC
+            ) best ON TRUE
+            GROUP BY m.month_start
+            ORDER BY m.month_start
+        `, [userId, months]);
+    }
 }
