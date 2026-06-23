@@ -260,11 +260,11 @@ export class SnippetResultRepository {
     ): Promise<{ day: string; wpm: number }[]> {
         return this.repo.query(`
             SELECT
-                ("createdAt" AT TIME ZONE 'Asia/Seoul')::date::text AS day,
-                MAX(wpm)::float                                      AS wpm
+                "createdAt"::date::text AS day,
+                MAX(wpm)::float         AS wpm
             FROM snippet_result
             WHERE "userId" = $1
-              AND ("createdAt" AT TIME ZONE 'Asia/Seoul')::date BETWEEN $2::date AND $3::date
+              AND "createdAt"::date BETWEEN $2::date AND $3::date
             GROUP BY day
             ORDER BY day
         `, [userId, start, end]);
@@ -274,7 +274,7 @@ export class SnippetResultRepository {
     async getLongestStreak(userId: number): Promise<number> {
         const rows: { longest: string }[] = await this.repo.query(`
             WITH daily AS (
-                SELECT DISTINCT ("createdAt" AT TIME ZONE 'Asia/Seoul')::date AS day
+                SELECT DISTINCT "createdAt"::date AS day
                 FROM snippet_result
                 WHERE "userId" = $1
             ),
@@ -282,9 +282,13 @@ export class SnippetResultRepository {
                 SELECT day, day - (ROW_NUMBER() OVER (ORDER BY day))::int AS grp
                 FROM daily
             )
-            SELECT COALESCE(MAX(COUNT(*)), 0) AS longest
-            FROM grouped
-            GROUP BY grp
+            counts AS (
+                SELECT COUNT(*) AS cnt
+                FROM grouped
+                GROUP BY grp
+            )
+            SELECT COALESCE(MAX(cnt), 0) AS longest
+            FROM counts
         `, [userId]);
 
         return rows.length ? Number(rows[0].longest) : 0;
@@ -309,7 +313,7 @@ export class SnippetResultRepository {
             FROM months m
             LEFT JOIN snippet_result sr
                    ON sr."userId" = $1
-                  AND date_trunc('month', sr."createdAt" AT TIME ZONE 'Asia/Seoul') = m.month_start
+                  AND date_trunc('month', sr."createdAt") = m.month_start
             GROUP BY m.month_start
             ORDER BY m.month_start
         `, [userId, months]);

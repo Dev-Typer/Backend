@@ -33,7 +33,7 @@ export class UserController {
     @UseInterceptors(FileInterceptor('file'))
     async uploadProfileImage(
         @CurrentUser() user: JwtUser,
-        @UploadedFile() file: ImageFile,
+        @UploadedFile() file: ImageFile | undefined,
     ): Promise<ApiResponse<{ profileUrl: string }>> {
         const response = await this.userService.uploadProfileImage(user.userId, file);
         return ApiResponse.success(response, HttpStatus.OK);
@@ -51,7 +51,7 @@ export class UserController {
     @UseInterceptors(FileInterceptor('file'))
     async uploadBannerImage(
         @CurrentUser() user: JwtUser,
-        @UploadedFile() file: ImageFile,
+        @UploadedFile() file: ImageFile | undefined,
     ): Promise<ApiResponse<{ bannerUrl: string }>> {
         const response = await this.userService.uploadBannerImage(user.userId, file);
         return ApiResponse.success(response, HttpStatus.OK);

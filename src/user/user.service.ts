@@ -7,7 +7,8 @@ import type { UserStreakDto, StreakDayEntry } from './dto/user-streak.dto';
 import type { UserWpmHistoryDto } from './dto/user-wpm-history.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
 import { UserRepository } from './user.repository';
-import { R2StorageService, ImageFile } from 'src/common/storage/r2.service';
+import { R2StorageService } from 'src/common/storage/r2.service';
+import type { ImageFile } from 'src/common/storage/r2.service';
 import { Language } from 'src/common/types/language.type';
 import { BusinessException } from 'src/common/exceptions/business.exception';
 import { UserError } from 'src/common/exceptions/error-code';
@@ -30,7 +31,9 @@ export class UserService {
 
     // ─── 이미지 업로드/삭제 ────────────────────────────────────────────────────
 
-    async uploadProfileImage(userId: number, file: ImageFile): Promise<{ profileUrl: string }> {
+    async uploadProfileImage(userId: number, file: ImageFile | undefined): Promise<{ profileUrl: string }> {
+        if (!file) throw new BusinessException(UserError.IMAGE_TYPE_NOT_ALLOWED);
+
         const user = await this.userRepository.findById(userId);
         if (!user) throw new BusinessException(UserError.NOT_FOUND);
 
@@ -52,7 +55,9 @@ export class UserService {
         await this.userRepository.updateProfileUrl(userId, null);
     }
 
-    async uploadBannerImage(userId: number, file: ImageFile): Promise<{ bannerUrl: string }> {
+    async uploadBannerImage(userId: number, file: ImageFile | undefined): Promise<{ bannerUrl: string }> {
+        if (!file) throw new BusinessException(UserError.IMAGE_TYPE_NOT_ALLOWED);
+
         const user = await this.userRepository.findById(userId);
         if (!user) throw new BusinessException(UserError.NOT_FOUND);
 
@@ -79,14 +84,14 @@ export class UserService {
     async getMeStreak(userId: number, year?: number, type?: string): Promise<UserStreakDto> {
         const isRecent = type === 'recent';
 
-        const today     = new Date();
-        const todayStr  = today.toISOString().slice(0, 10);
+        const now       = new Date();
+        const todayStr  = now.toISOString().slice(0, 10);
         const startStr  = isRecent
-            ? new Date(today.getTime() - 364 * 86400 * 1000).toISOString().slice(0, 10)
-            : `${year ?? today.getFullYear()}-01-01`;
+            ? new Date(now.getTime() - 364 * 86400 * 1000).toISOString().slice(0, 10)
+            : `${year ?? now.getUTCFullYear()}-01-01`;
         const endStr    = isRecent
             ? todayStr
-            : `${year ?? today.getFullYear()}-12-31`;
+            : `${year ?? now.getUTCFullYear()}-12-31`;
 
         const [dayRows, longest] = await Promise.all([
             this.snippetResultRepository.getStreakDayData(userId, startStr, endStr),
@@ -108,8 +113,8 @@ export class UserService {
         }
 
         // current: 어제부터 역순으로 연속 제출일 수
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterday = new Date(now);
+        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
         let current = 0;
         const check = new Date(yesterday);
         while (submittedSet.has(check.toISOString().slice(0, 10))) {
@@ -120,7 +125,7 @@ export class UserService {
         return {
             userId,
             type:     isRecent ? 'recent' : 'year',
-            year:     isRecent ? null : (year ?? today.getFullYear()),
+            year:     isRecent ? null : (year ?? now.getUTCFullYear()),
             current,
             longest,
             yearData,
