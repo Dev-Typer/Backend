@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { SnippetAdminService } from './snippet-admin.service';
-import { CreateSnippetDto } from './dto/create-snippet.dto';
-import { UpdateSnippetDto } from './dto/update-snippet.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RoleGuard } from '../common/guards/role.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../user/enums/user-role.enum';
-import { ApiResponse } from '../common/dto/api-response';
+import { CreateSnippetDto } from '../dto/create-snippet.dto';
+import { UpdateSnippetDto } from '../dto/update-snippet.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RoleGuard } from '../../common/guards/role.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../user/enums/user-role.enum';
+import { ApiResponse } from '../../common/dto/api-response';
 
 // 모든 엔드포인트: ADMIN Role 필요 (미인증 401, 권한 없음 403)
 @Controller('/api/admin/snippets')

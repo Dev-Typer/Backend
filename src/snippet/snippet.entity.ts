@@ -4,7 +4,7 @@ import {
   Column,
   CreateDateColumn,
 } from 'typeorm';
-import { SnippetLanguage } from './enums/snippet-language.enum';
+import { Language } from '../common/types/language.type';
 import { SnippetDifficulty } from './enums/snippt-difficulty.enum';
 
 @Entity()
@@ -15,8 +15,8 @@ export class Snippet {
   @Column()
   title!: string;
 
-  @Column({ type: 'enum', enum: SnippetLanguage })
-  language!: SnippetLanguage;
+  @Column({ type: 'enum', enum: Language })
+  language!: Language;
 
   @Column({ type: 'enum', enum: SnippetDifficulty })
   difficulty!: SnippetDifficulty;

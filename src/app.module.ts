@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { SnippetModule } from './snippet/snippet.module';
 import { SnippetResultModule } from './snippet-result/snippet-result.module';
 import { DailyChallengeModule } from './daily-challenge/daily-challenge.module';
+import { UserModule } from './user/user.module';
 import jwtConfig from './config/jwt.config';
 
 @Module({
@@ -41,6 +42,7 @@ import jwtConfig from './config/jwt.config';
     SnippetModule,
     SnippetResultModule,
     DailyChallengeModule,
+    UserModule,
   ],
 })
 export class AppModule {}

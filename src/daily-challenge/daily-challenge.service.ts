@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Transactional } from 'typeorm-transactional';
 import { DailyChallengeRepository } from './daily-challenge.repository';
-import { SnippetRepository } from '../snippet/snippet.repository';
+import { SnippetRepository } from '../snippet/default/snippet.repository';
 import { SnippetResultRepository } from '../snippet-result/snippet-result.repository';
 import { DailyChallengeResponseDto } from './dto/daily-challenge-response.dto';
 import { SubmitDailyChallengeDto } from './dto/submit-daily-challenge.dto';
@@ -41,17 +41,18 @@ export class DailyChallengeService {
         );
 
         const nWpm = calculateNWpm(dto.wpm, dto.accuracy);
+
         const core = calculateCore(
-        dto.wpm,
-        dto.accuracy,
-        challenge.snippet.difficulty,
-        challenge.snippet.content.length,
+            dto.wpm,
+            dto.accuracy,
+            challenge.snippet.difficulty,
+            challenge.snippet.content.length,
         );
 
         const rawCore = calculateRawCore(
-        dto.rawWpm,
-        challenge.snippet.difficulty,
-        challenge.snippet.content.length,
+            dto.rawWpm,
+            challenge.snippet.difficulty,
+            challenge.snippet.content.length,
         );
 
         const savedResult = await this.snippetResultRepository.save({

@@ -1,6 +1,6 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { SnippetLanguage } from '../enums/snippet-language.enum';
+import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
 
 export class CreateSnippetDto {
@@ -8,8 +8,8 @@ export class CreateSnippetDto {
   @IsString()
   title!: string;
 
-  @IsEnum(SnippetLanguage)
-  language!: SnippetLanguage;
+  @IsEnum(Language)
+  language!: Language;
 
   @IsEnum(SnippetDifficulty)
   difficulty!: SnippetDifficulty;

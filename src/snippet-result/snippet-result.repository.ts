@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { SnippetResult } from './entities/snippet-result.entity';
 
 export interface UserRankInfo {
@@ -177,5 +177,32 @@ export class SnippetResultRepository {
             .getRawOne<{ count: string }>();
 
         return Number(raw?.count ?? 0) + 1;
+    }
+
+    // 유저의 스니펫별 최고 core 중 상위 100개 — Total CORE 계산용
+    async getTop100BestCoresByUser(userId: number): Promise<SnippetResult[]> {
+    
+        const rows: { id: number }[] = await this.repo.query(`
+            SELECT id FROM (
+                SELECT DISTINCT ON ("snippetId") id, core
+                FROM snippet_result
+                WHERE "userId" = $1
+                ORDER BY "snippetId", core DESC
+            ) best
+            ORDER BY core DESC
+            LIMIT 100
+        `, [userId]);
+
+        if (!rows.length) return [];  // 빈 배열일 때 In([]) 쿼리 방지
+
+        const ids = rows.map(r => r.id);
+
+        const results = await this.repo.find({
+            where: { id: In(ids) },
+            relations: { snippet: true },
+        });
+
+        const resultMap = new Map(results.map(r => [r.id, r]));
+        return ids.map(id => resultMap.get(id)!).filter(Boolean);
     }
 }

@@ -1,8 +1,8 @@
 import { Controller, Get, HttpStatus, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { SnippetService } from './snippet.service';
-import { SnippetQueryDto, RandomSnippetQueryDto } from './dto/snippet-query.dto';
-import { SnippetResponseDto } from './dto/snippet-response.dto';
-import { ApiResponse } from '../common/dto/api-response';
+import { SnippetQueryDto, RandomSnippetQueryDto } from '../dto/snippet-query.dto';
+import { SnippetResponseDto } from '../dto/snippet-response.dto';
+import { ApiResponse } from '../../common/dto/api-response';
 
 @Controller('/api/snippets')
 export class SnippetController {
