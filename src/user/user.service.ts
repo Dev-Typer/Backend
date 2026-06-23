@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { UserRepository } from './user.repository';
 import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
 import { calculateTotalCore } from 'src/common/utils/core-calculator.util';
@@ -7,7 +6,6 @@ import { calculateTotalCore } from 'src/common/utils/core-calculator.util';
 @Injectable()
 export class UserService {
     constructor(
-        private readonly userRepository: UserRepository,
         private readonly snippetResultRepository: SnippetResultRepository,
     ) {}
 
