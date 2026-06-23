@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
-import { calculateTotalCore } from 'src/common/utils/core-calculator.util';
 
 @Injectable()
 export class UserService {
@@ -23,7 +22,7 @@ export class UserService {
         }
 
         const snippetList = results.map(r => UserSnippetInfo.from(r));
-        const totalCore   = calculateTotalCore(snippetList.map(s => s.core));
+        const totalCore   = snippetList.reduce((sum, s) => sum + s.core, 0);
 
         return UserCoreDto.builder()
             .userId(userId)
