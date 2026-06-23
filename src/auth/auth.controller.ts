@@ -1,8 +1,7 @@
-﻿import { Controller, Get, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtUser } from '../common/types/jwt-user.type';
 import type { ConfigType } from '@nestjs/config';
-import { ApiResponse } from '../common/dto/api-response';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { AuthError } from '../common/exceptions/error-code';
 import { AuthGuard } from '@nestjs/passport';
@@ -96,10 +95,5 @@ export class AuthController {
     res.clearCookie('refreshToken', cookieOptions);
   }
 
-  @Get('/me')
-  @UseGuards(JwtAuthGuard)
-  getMe(@CurrentUser() user: JwtUser): ApiResponse<JwtUser> {
-    return ApiResponse.success(user, HttpStatus.OK);
-  }
 }
 

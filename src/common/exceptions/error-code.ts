@@ -80,6 +80,24 @@ export const ResultError = {
   },
 } as const satisfies Record<string, ErrorCode>;
 
+export const UserError = {
+  NOT_FOUND: {
+    code: 'USER_001',
+    statusCode: HttpStatus.NOT_FOUND,
+    message: '존재하지 않는 유저입니다',
+  },
+  IMAGE_TYPE_NOT_ALLOWED: {
+    code: 'USER_002',
+    statusCode: HttpStatus.BAD_REQUEST,
+    message: '허용되지 않는 이미지 타입입니다',
+  },
+  IMAGE_TOO_LARGE: {
+    code: 'USER_003',
+    statusCode: HttpStatus.BAD_REQUEST,
+    message: '이미지 크기가 초과되었습니다',
+  },
+} as const satisfies Record<string, ErrorCode>;
+
 export const DailyError = {
   NOT_FOUND: {
     code: 'DAILY_001',

@@ -250,4 +250,72 @@ export class SnippetResultRepository {
             ORDER BY m.month_start
         `, [userId, months]);
     }
+
+    // 날짜별 제출 여부 + 최고 WPM — streak 그리드용
+    // start/end: 'YYYY-MM-DD' (inclusive)
+    async getStreakDayData(
+        userId: number,
+        start: string,
+        end: string,
+    ): Promise<{ day: string; wpm: number }[]> {
+        return this.repo.query(`
+            SELECT
+                "createdAt"::date::text AS day,
+                MAX(wpm)::float         AS wpm
+            FROM snippet_result
+            WHERE "userId" = $1
+              AND "createdAt"::date BETWEEN $2::date AND $3::date
+            GROUP BY day
+            ORDER BY day
+        `, [userId, start, end]);
+    }
+
+    // 역대 최장 연속 제출 일수 — 전체 기간 기준
+    async getLongestStreak(userId: number): Promise<number> {
+        const rows: { longest: string }[] = await this.repo.query(`
+            WITH daily AS (
+                SELECT DISTINCT "createdAt"::date AS day
+                FROM snippet_result
+                WHERE "userId" = $1
+            ),
+            grouped AS (
+                SELECT day, day - (ROW_NUMBER() OVER (ORDER BY day))::int AS grp
+                FROM daily
+            )
+            counts AS (
+                SELECT COUNT(*) AS cnt
+                FROM grouped
+                GROUP BY grp
+            )
+            SELECT COALESCE(MAX(cnt), 0) AS longest
+            FROM counts
+        `, [userId]);
+
+        return rows.length ? Number(rows[0].longest) : 0;
+    }
+
+    // 월별 평균 WPM — 최근 N개월
+    async getWpmMonthlyHistory(
+        userId: number,
+        months: number,
+    ): Promise<{ month: string; avg_wpm: string }[]> {
+        return this.repo.query(`
+            WITH months AS (
+                SELECT generate_series(
+                    date_trunc('month', NOW()) - ($2::int - 1) * INTERVAL '1 month',
+                    date_trunc('month', NOW()),
+                    INTERVAL '1 month'
+                )::date AS month_start
+            )
+            SELECT
+                TO_CHAR(m.month_start, 'YYYY-MM') AS month,
+                COALESCE(ROUND(AVG(sr.wpm)::numeric, 1), 0)::text AS avg_wpm
+            FROM months m
+            LEFT JOIN snippet_result sr
+                   ON sr."userId" = $1
+                  AND date_trunc('month', sr."createdAt") = m.month_start
+            GROUP BY m.month_start
+            ORDER BY m.month_start
+        `, [userId, months]);
+    }
 }

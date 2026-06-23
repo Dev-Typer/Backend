@@ -2,14 +2,151 @@ import { Injectable } from '@nestjs/common';
 import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
 import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-language.dto';
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
+import { UserProfileDto } from './dto/user-profile.dto';
+import type { UserStreakDto, StreakDayEntry } from './dto/user-streak.dto';
+import type { UserWpmHistoryDto } from './dto/user-wpm-history.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
+import { UserRepository } from './user.repository';
+import { R2StorageService } from 'src/common/storage/r2.service';
+import type { ImageFile } from 'src/common/storage/r2.service';
 import { Language } from 'src/common/types/language.type';
+import { BusinessException } from 'src/common/exceptions/business.exception';
+import { UserError } from 'src/common/exceptions/error-code';
 
 @Injectable()
 export class UserService {
     constructor(
         private readonly snippetResultRepository: SnippetResultRepository,
+        private readonly userRepository: UserRepository,
+        private readonly r2: R2StorageService,
     ) {}
+
+    // ─── 프로필 조회 ───────────────────────────────────────────────────────────
+
+    async getMeProfile(userId: number): Promise<UserProfileDto> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+        return UserProfileDto.from(user);
+    }
+
+    // ─── 이미지 업로드/삭제 ────────────────────────────────────────────────────
+
+    async uploadProfileImage(userId: number, file: ImageFile | undefined): Promise<{ profileUrl: string }> {
+        if (!file) throw new BusinessException(UserError.IMAGE_TYPE_NOT_ALLOWED);
+
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+
+        const { publicUrl } = await this.r2.upload('profile', userId, file);
+
+        await this.userRepository.updateProfileUrl(userId, publicUrl);
+
+        return { profileUrl: publicUrl };
+    }
+
+    async deleteProfileImage(userId: number): Promise<void> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+
+        if (user.profileUrl) {
+            await this.r2.delete(this.r2.extractKey(user.profileUrl));
+        }
+
+        await this.userRepository.updateProfileUrl(userId, null);
+    }
+
+    async uploadBannerImage(userId: number, file: ImageFile | undefined): Promise<{ bannerUrl: string }> {
+        if (!file) throw new BusinessException(UserError.IMAGE_TYPE_NOT_ALLOWED);
+
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+
+        const { publicUrl } = await this.r2.upload('banner', userId, file);
+
+        await this.userRepository.updateBannerUrl(userId, publicUrl);
+
+        return { bannerUrl: publicUrl };
+    }
+
+    async deleteBannerImage(userId: number): Promise<void> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+
+        if (user.bannerUrl) {
+            await this.r2.delete(this.r2.extractKey(user.bannerUrl));
+        }
+
+        await this.userRepository.updateBannerUrl(userId, null);
+    }
+
+    // ─── Streak ───────────────────────────────────────────────────────────────
+
+    async getMeStreak(userId: number, year?: number, type?: string): Promise<UserStreakDto> {
+        const isRecent = type === 'recent';
+
+        const now       = new Date();
+        const todayStr  = now.toISOString().slice(0, 10);
+        const startStr  = isRecent
+            ? new Date(now.getTime() - 364 * 86400 * 1000).toISOString().slice(0, 10)
+            : `${year ?? now.getUTCFullYear()}-01-01`;
+        const endStr    = isRecent
+            ? todayStr
+            : `${year ?? now.getUTCFullYear()}-12-31`;
+
+        const [dayRows, longest] = await Promise.all([
+            this.snippetResultRepository.getStreakDayData(userId, startStr, endStr),
+            this.snippetResultRepository.getLongestStreak(userId),
+        ]);
+
+        const submittedSet = new Map(dayRows.map(r => [r.day, Number(r.wpm)]));
+
+        // 날짜 범위 전체를 순회해 yearData 생성
+        const yearData: StreakDayEntry[] = [];
+        const cursor = new Date(startStr);
+        const endDate = new Date(endStr);
+
+        while (cursor <= endDate) {
+            const dateStr = cursor.toISOString().slice(0, 10);
+            const wpm     = submittedSet.get(dateStr) ?? null;
+            yearData.push({ date: dateStr, submitted: wpm !== null, wpm });
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        // current: 어제부터 역순으로 연속 제출일 수
+        const yesterday = new Date(now);
+        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+        let current = 0;
+        const check = new Date(yesterday);
+        while (submittedSet.has(check.toISOString().slice(0, 10))) {
+            current++;
+            check.setDate(check.getDate() - 1);
+        }
+
+        return {
+            userId,
+            type:     isRecent ? 'recent' : 'year',
+            year:     isRecent ? null : (year ?? now.getUTCFullYear()),
+            current,
+            longest,
+            yearData,
+        };
+    }
+
+    // ─── WPM 추이 ─────────────────────────────────────────────────────────────
+
+    async getMeWpmHistory(userId: number): Promise<UserWpmHistoryDto> {
+        const MONTHS = 6;
+        const rows = await this.snippetResultRepository.getWpmMonthlyHistory(userId, MONTHS);
+
+        const results = rows.map(row => ({
+            month:   row.month,
+            avgWpm:  Number(row.avg_wpm),
+        }));
+
+        return { userId, range: `${MONTHS}m`, results };
+    }
+
+    // ─── CORE ─────────────────────────────────────────────────────────────────
 
     async getMyCoreInfo(userId: number): Promise<UserCoreDto> {
         const results = await this.snippetResultRepository.getTop100BestCoresByUser(userId);
