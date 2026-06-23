@@ -23,11 +23,15 @@ export class User {
     @Column({ default: 0 })
     rating!: number;
 
-    @Column({ default: 0 })
-    tier!: string;
-
     @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
     role!: UserRole;
+
+    @Column({ nullable: true, type: 'varchar' })
+    profileUrl!: string | null;
+
+    @Column({ nullable: true, type: 'varchar' })
+    bannerUrl!: string | null;
+
     @CreateDateColumn()
     createdAt!: Date;
 }
