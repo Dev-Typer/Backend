@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
+import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-language.dto';
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
+import { Language } from 'src/common/types/language.type';
 
 @Injectable()
 export class UserService {
@@ -30,6 +32,28 @@ export class UserService {
             .snippetCount(snippetList.length)
             .snippetList(snippetList)
             .build();
+    }
+
+    async getMyCoreByLanguage(userId: number): Promise<UserCoreByLanguageDto> {
+        const rows = await this.snippetResultRepository.getBestCoresByUserWithLanguage(userId);
+
+        const grouped = new Map<Language, number[]>();
+        for (const row of rows) {
+            const lang = row.language as Language;
+            if (!grouped.has(lang)) grouped.set(lang, []);
+            grouped.get(lang)!.push(Number(row.core));
+        }
+
+        const byLanguage: LangCoreEntry[] = Object.values(Language).map(lang => {
+            const cores = grouped.get(lang) ?? [];
+            return {
+                language:     lang,
+                snippetCount: cores.length,
+                totalCore:    cores.reduce((sum, c) => sum + Math.floor(c), 0),
+            };
+        });
+
+        return { userId, byLanguage };
     }
 
     async getMyCoreHistory(userId: number): Promise<UserCoreHistoryDto> {

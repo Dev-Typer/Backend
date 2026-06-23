@@ -179,6 +179,22 @@ export class SnippetResultRepository {
         return Number(raw?.count ?? 0) + 1;
     }
 
+    // 유저의 스니펫별 최고 core — 언어 정보 포함, by-language 집계용
+    async getBestCoresByUserWithLanguage(
+        userId: number,
+    ): Promise<{ snippetId: number; core: string; language: string }[]> {
+        return this.repo.query(`
+            SELECT DISTINCT ON (sr."snippetId")
+                sr."snippetId",
+                sr.core,
+                s.language
+            FROM snippet_result sr
+            JOIN snippet s ON s.id = sr."snippetId"
+            WHERE sr."userId" = $1
+            ORDER BY sr."snippetId", sr.core DESC
+        `, [userId]);
+    }
+
     // 유저의 스니펫별 최고 core 중 상위 100개 — Total CORE 계산용
     async getTop100BestCoresByUser(userId: number): Promise<SnippetResult[]> {
     
