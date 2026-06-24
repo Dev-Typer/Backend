@@ -19,7 +19,7 @@ export class SnippetAdminService {
         const [items, total] = await this.snippetAdminRepository.findAll(
             language, difficulty, isActive, page, size,
         );
-        return { data: items.map(SnippetResponseDto.from), total, page, size };
+        return { data: items.map(s => SnippetResponseDto.from(s)), total, page, size };
     }
 
     async create(dto: CreateSnippetDto): Promise<SnippetResponseDto> {
