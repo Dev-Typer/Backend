@@ -33,6 +33,9 @@ export class Snippet {
   @Column({ default: 0 })
   playCount!: number;
 
+  @Column({ default: 0 })
+  likeCount!: number;
+
   @Column({ default: true })
   isActive! : boolean;
 

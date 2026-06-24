@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { Transactional } from 'typeorm-transactional';
 import { SnippetRepository } from './snippet.repository';
+import { SnippetLikeRepository } from '../snippet-like.repository';
 import { SnippetQueryDto } from '../dto/snippet-query.dto';
 import { SnippetResponseDto } from '../dto/snippet-response.dto';
+import { SnippetLikeResponseDto } from '../dto/snippet-like-response.dto';
 import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
 import { BusinessException } from '../../common/exceptions/business.exception';
@@ -18,6 +21,7 @@ export interface SnippetListResponse {
 export class SnippetService {
     constructor(
         private readonly snippetRepository: SnippetRepository,
+        private readonly snippetLikeRepository: SnippetLikeRepository,
     ) {}
 
     // 활성화된 스니펫 목록 조회 — isActive: true 고정
@@ -31,7 +35,7 @@ export class SnippetService {
             size,
         );
 
-        return { data: items.map(SnippetResponseDto.from), total, page, size };
+        return { data: items.map(s => SnippetResponseDto.from(s)), total, page, size };
     }
 
     // 단건 조회 — 활성화된 스니펫만 반환
@@ -46,5 +50,29 @@ export class SnippetService {
         const snippet = await this.snippetRepository.findRandom(language, difficulty);
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
         return SnippetResponseDto.from(snippet);
+    }
+
+    // 좋아요 추가 — 이미 좋아요 상태면 현재 상태 그대로 반환 (멱등)
+    @Transactional()
+    async like(snippetId: number, userId: number): Promise<SnippetLikeResponseDto> {
+        const snippet = await this.snippetRepository.findActiveById(snippetId);
+        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+
+        const inserted = await this.snippetLikeRepository.insertIfNotExists(userId, snippetId);
+        if (inserted) await this.snippetRepository.incrementLikeCount(snippetId);
+
+        return { likeCount: snippet.likeCount + (inserted ? 1 : 0), isLiked: true };
+    }
+
+    // 좋아요 취소 — 이미 취소 상태면 현재 상태 그대로 반환 (멱등)
+    @Transactional()
+    async unlike(snippetId: number, userId: number): Promise<SnippetLikeResponseDto> {
+        const snippet = await this.snippetRepository.findActiveById(snippetId);
+        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+
+        const deleted = await this.snippetLikeRepository.deleteIfExists(userId, snippetId);
+        if (deleted) await this.snippetRepository.decrementLikeCount(snippetId);
+
+        return { likeCount: Math.max(0, snippet.likeCount - (deleted ? 1 : 0)), isLiked: false };
     }
 }

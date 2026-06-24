@@ -11,10 +11,12 @@ export class SnippetResponseDto {
   source!: string | null;
   avgWpm!: number;
   playCount!: number;
+  likeCount!: number;
+  isLiked!: boolean;
   isActive!: boolean;
   createdAt!: Date;
 
-  static from(snippet: Snippet): SnippetResponseDto {
+  static from(snippet: Snippet, isLiked = false): SnippetResponseDto {
     const dto = new SnippetResponseDto();
     dto.id         = snippet.id;
     dto.title      = snippet.title;
@@ -24,6 +26,8 @@ export class SnippetResponseDto {
     dto.source     = snippet.source;
     dto.avgWpm     = snippet.avgWpm;
     dto.playCount  = snippet.playCount;
+    dto.likeCount  = snippet.likeCount;
+    dto.isLiked    = isLiked;
     dto.isActive   = snippet.isActive;
     dto.createdAt  = snippet.createdAt;
     return dto;
