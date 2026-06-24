@@ -28,9 +28,12 @@ export interface FullLeaderboardRow {
 export interface RankingRow {
     userId: number;
     username: string;
+    profileUrl: string | null;
     core: string;
     wpm: string;
+    rawWpm: string;
     accuracy: string;
+    durationSec: string;
     createdAt: Date;
 }
 
@@ -139,21 +142,43 @@ export class SnippetResultRepository {
         `, [snippetId, start, end]);
     }
 
-    // 스니펫별 랭킹 — 유저별 최고 core 플레이 한 행씩 추출, core DESC 상위 50위
-    async findRankingBySnippet(snippetId: number): Promise<RankingRow[]> {
-        return this.repo.query(`
-            SELECT best."userId", u.username, best.core, best.wpm, best.accuracy, best."createdAt"
+    // 스니펫별 랭킹 — 유저별 최고 core 플레이 한 행씩 추출, core DESC 페이지네이션
+    async findRankingBySnippet(
+        snippetId: number,
+        page: number,
+        size: number,
+    ): Promise<{ rows: RankingRow[]; total: number }> {
+        const offset = (page - 1) * size;
+        const rows: RankingRow[] = await this.repo.query(`
+            SELECT
+                best."userId",
+                u.username,
+                u."profileUrl",
+                best.core,
+                best.wpm,
+                best."rawWpm",
+                best.accuracy,
+                best."durationSec",
+                best."createdAt"
             FROM (
                 SELECT DISTINCT ON (r."userId")
-                    r."userId", r.core, r.wpm, r.accuracy, r."createdAt"
+                    r."userId", r.core, r.wpm, r."rawWpm", r.accuracy, r."durationSec", r."createdAt"
                 FROM snippet_result r
                 WHERE r."snippetId" = $1
                 ORDER BY r."userId", r.core DESC
             ) best
             JOIN "user" u ON u.id = best."userId"
             ORDER BY best.core DESC
-            LIMIT 50
+            LIMIT $2 OFFSET $3
+        `, [snippetId, size, offset]);
+
+        const countRows: { total: string }[] = await this.repo.query(`
+            SELECT COUNT(DISTINCT "userId")::int AS total
+            FROM snippet_result
+            WHERE "snippetId" = $1
         `, [snippetId]);
+
+        return { rows, total: Number(countRows[0]?.total ?? 0) };
     }
 
     // 유저의 특정 스니펫 기존 최고 core
