@@ -1,8 +1,12 @@
-import { Controller, Get, HttpStatus, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Delete, Get, HttpStatus, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { SnippetService } from './snippet.service';
 import { SnippetQueryDto, RandomSnippetQueryDto } from '../dto/snippet-query.dto';
 import { SnippetResponseDto } from '../dto/snippet-response.dto';
+import { SnippetLikeResponseDto } from '../dto/snippet-like-response.dto';
 import { ApiResponse } from '../../common/dto/api-response';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { JwtUser } from '../../common/types/jwt-user.type';
 
 @Controller('/api/snippets')
 export class SnippetController {
@@ -23,6 +27,31 @@ export class SnippetController {
   async findRandom(@Query() query: RandomSnippetQueryDto): Promise<ApiResponse<SnippetResponseDto>> {
     const snippet = await this.snippetService.findRandom(query.language, query.difficulty);
     return ApiResponse.success(snippet, HttpStatus.OK);
+  }
+
+  // POST /api/snippets/:id/like
+  // 좋아요 추가. 이미 좋아요 상태면 현재 상태 그대로 반환 (멱등)
+  // ⚠️ /:id/like 는 /:id 보다 위에 있어야 함
+  @Post(':id/like')
+  @UseGuards(JwtAuthGuard)
+  async like(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtUser,
+  ): Promise<ApiResponse<SnippetLikeResponseDto>> {
+    const result = await this.snippetService.like(id, user.userId);
+    return ApiResponse.success(result, HttpStatus.OK);
+  }
+
+  // DELETE /api/snippets/:id/like
+  // 좋아요 취소. 이미 취소 상태면 현재 상태 그대로 반환 (멱등)
+  @Delete(':id/like')
+  @UseGuards(JwtAuthGuard)
+  async unlike(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtUser,
+  ): Promise<ApiResponse<SnippetLikeResponseDto>> {
+    const result = await this.snippetService.unlike(id, user.userId);
+    return ApiResponse.success(result, HttpStatus.OK);
   }
 
   // GET /api/snippets/:id
