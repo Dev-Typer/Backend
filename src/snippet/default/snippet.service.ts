@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SnippetRepository } from './snippet.repository';
+import { SnippetLikeRepository } from '../snippet-like.repository';
 import { SnippetQueryDto } from '../dto/snippet-query.dto';
 import { SnippetResponseDto } from '../dto/snippet-response.dto';
 import { Language } from '../../common/types/language.type';
@@ -18,20 +19,26 @@ export interface SnippetListResponse {
 export class SnippetService {
     constructor(
         private readonly snippetRepository: SnippetRepository,
+        private readonly snippetLikeRepository: SnippetLikeRepository,
     ) {}
 
-    // 활성화된 스니펫 목록 조회 — isActive: true 고정
-    async findAll(query: SnippetQueryDto): Promise<SnippetListResponse> {
-        const { language, difficulty, page = 1, size = 10 } = query;
+    // 활성화된 스니펫 목록 조회 — 검색/필터/정렬
+    async findAll(query: SnippetQueryDto, userId?: number): Promise<SnippetListResponse> {
+        const { page = 1, size = 10 } = query;
 
-        const [items, total] = await this.snippetRepository.findActiveList(
-            language,
-            difficulty,
+        const [items, total] = await this.snippetRepository.findActiveList(query, userId);
+
+        // isLiked 배치 처리 — N+1 방지, 총 쿼리 2회
+        const likedIds = userId && items.length
+            ? new Set(await this.snippetLikeRepository.findLikedSnippetIds(userId, items.map(s => s.id)))
+            : new Set<number>();
+
+        return {
+            data: items.map(s => SnippetResponseDto.from(s, likedIds.has(s.id))),
+            total,
             page,
             size,
-        );
-
-        return { data: items.map(SnippetResponseDto.from), total, page, size };
+        };
     }
 
     // 단건 조회 — 활성화된 스니펫만 반환
