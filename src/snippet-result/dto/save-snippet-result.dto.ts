@@ -38,12 +38,12 @@ export class SaveSnippetResultDto {
 
   @IsNumber()
   @Min(0.1)
-  @Max(300)
+  @Max(9999)
   wpm!: number;
 
   @IsNumber()
   @Min(0.1)
-  @Max(300)
+  @Max(9999)
   rawWpm!: number;
 
   @IsNumber()
@@ -52,8 +52,8 @@ export class SaveSnippetResultDto {
   accuracy!: number;
 
   @IsInt()
-  @Min(3)
-  @Max(600)
+  @Min(1)
+  @Max(3600)
   durationSec!: number;
 
   @IsOptional()

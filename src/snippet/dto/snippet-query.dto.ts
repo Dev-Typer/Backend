@@ -8,8 +8,12 @@ export type PlayedByMeOption = 'played' | 'not-played';
 
 export class SnippetQueryDto {
   @IsOptional()
-  @IsEnum(Language)
-  language?: Language;
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+    const arr = Array.isArray(value) ? value : [value];
+    return arr.filter((v: string) => Object.values(Language).includes(v as Language)) as Language[];
+  })
+  language?: Language[];
 
   @IsOptional()
   @IsEnum(SnippetDifficulty)

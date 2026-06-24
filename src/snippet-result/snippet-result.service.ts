@@ -32,6 +32,8 @@ export class SnippetResultService {
 
     if (!userId) return null;
 
+    const prevBestCore = await this.snippetResultRepository.findBestCoreByUserAndSnippet(userId, dto.snippetId);
+
     const nWpm = calculateNWpm(dto.wpm, dto.accuracy);
     const core = calculateCore(
       dto.wpm,
@@ -39,12 +41,12 @@ export class SnippetResultService {
       snippet.difficulty,
       snippet.content.length,
     );
-
     const rawCore = calculateRawCore(
       dto.rawWpm,
       snippet.difficulty,
       snippet.content.length,
     );
+
     const saved = await this.snippetResultRepository.save({
       userId,
       snippetId: dto.snippetId,
@@ -61,7 +63,7 @@ export class SnippetResultService {
     });
     await this.snippetRepository.incrementStats(dto.snippetId, dto.wpm);
 
-    return SnippetResultResponseDto.from(saved);
+    return SnippetResultResponseDto.from(saved, prevBestCore);
   }
 
   async findStats(id: number, userId: number): Promise<SnippetResultStatsResponseDto> {

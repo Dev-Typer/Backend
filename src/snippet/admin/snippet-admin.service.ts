@@ -16,8 +16,9 @@ export class SnippetAdminService {
 
     async findAll(query: AdminSnippetQueryDto): Promise<SnippetListResponse> {
         const { language, difficulty, isActive, page = 1, size = 10 } = query;
+        const langArg = Array.isArray(language) ? (language.length === 1 ? language[0] : language) : language;
         const [items, total] = await this.snippetAdminRepository.findAll(
-            language, difficulty, isActive, page, size,
+            langArg, difficulty, isActive, page, size,
         );
         return { data: items.map(s => SnippetResponseDto.from(s)), total, page, size };
     }

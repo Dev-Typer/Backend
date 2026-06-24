@@ -110,10 +110,11 @@ export class DailyChallengeService {
             rankDelta,
             rankChange,
             bestStatus,
+            core,
             nearbyUsers,
         });
     }
-    
+
     async getLeaderboard(userId?: number): Promise<ChallengeLeaderboardResponseDto> {
         const challenge = await this.getSnippet();
         const { start, end } = this.getTodayUtcRange(challenge.date);

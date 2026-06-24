@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { Snippet } from '../snippet.entity';
 import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
@@ -21,14 +21,16 @@ export class SnippetAdminRepository {
     }
 
     async findAll(
-        language?: Language,
+        language?: Language | Language[],
         difficulty?: SnippetDifficulty,
         isActive?: boolean,
         page: number = 1,
         size: number = 10,
     ): Promise<[Snippet[], number]> {
         const where: FindOptionsWhere<Snippet> = {};
-        if (language !== undefined)   where.language   = language;
+        if (language !== undefined) {
+            where.language = Array.isArray(language) && language.length > 1 ? In(language) : Array.isArray(language) ? language[0] : language;
+        }
         if (difficulty !== undefined) where.difficulty = difficulty;
         if (isActive !== undefined)   where.isActive   = isActive;
 

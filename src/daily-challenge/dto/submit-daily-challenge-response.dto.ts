@@ -43,10 +43,12 @@ export class SubmitDailyChallengeResponseDto {
   rankChange!: RankChangeStatus;
   /** 오늘 개인 최고 기록 갱신 여부 */
   bestStatus!: BestStatus;
+  /** 이번 제출의 CORE 점수 */
+  core!: number;
   /** 현재 순위 기준 위 2명·본인·아래 2명 (최대 5명) */
   nearbyUsers!: NearbyUserItem[];
 
-  constructor(partial: Required<Pick<SubmitDailyChallengeResponseDto, 'resultId' | 'nWpm' | 'afterRank' | 'rankChange' | 'bestStatus' | 'nearbyUsers'>> & Pick<SubmitDailyChallengeResponseDto, 'beforeRank' | 'rankDelta'>) {
+  constructor(partial: Required<Pick<SubmitDailyChallengeResponseDto, 'resultId' | 'nWpm' | 'afterRank' | 'rankChange' | 'bestStatus' | 'core' | 'nearbyUsers'>> & Pick<SubmitDailyChallengeResponseDto, 'beforeRank' | 'rankDelta'>) {
     Object.assign(this, partial);
   }
 }

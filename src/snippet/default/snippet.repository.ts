@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Snippet } from '../snippet.entity';
 import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
@@ -25,7 +25,11 @@ export class SnippetRepository {
             .where('snippet.isActive = true');
 
         // 언어 / 난이도 필터
-        if (language)   qb.andWhere('snippet.language = :language', { language });
+        if (language?.length) {
+            language.length === 1
+                ? qb.andWhere('snippet.language = :language', { language: language[0] })
+                : qb.andWhere('snippet.language IN (:...languages)', { languages: language });
+        }
         if (difficulty) qb.andWhere('snippet.difficulty = :difficulty', { difficulty });
 
         // 제목 검색 (대소문자 무시)

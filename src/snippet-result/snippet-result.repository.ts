@@ -156,6 +156,16 @@ export class SnippetResultRepository {
         `, [snippetId]);
     }
 
+    // 유저의 특정 스니펫 기존 최고 core
+    async findBestCoreByUserAndSnippet(userId: number, snippetId: number): Promise<number> {
+        const rows: { core: string }[] = await this.repo.query(`
+            SELECT COALESCE(MAX(core), 0) AS core
+            FROM snippet_result
+            WHERE "userId" = $1 AND "snippetId" = $2
+        `, [userId, snippetId]);
+        return Number(rows[0]?.core ?? 0);
+    }
+
     // 유저별 최고 core 기준 순위 계산
     async calcRank(snippetId: number, myCore: number): Promise<number> {
         const raw: { count: string }[] = await this.repo.query(`
