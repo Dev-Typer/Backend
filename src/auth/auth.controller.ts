@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtUser } from '../common/types/jwt-user.type';
 import type { ConfigType } from '@nestjs/config';
@@ -10,6 +10,8 @@ import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { User } from '../user/user.entity';
+import { ApiResponse } from '../common/dto/api-response';
+import type { AuthMeResponseDto } from './dto/auth-me-response.dto';
 import jwtConfig from '../config/jwt.config';
 
 @Controller('/api/auth')
@@ -21,6 +23,13 @@ export class AuthController {
     @Inject(jwtConfig.KEY)
     private readonly jwtConf: ConfigType<typeof jwtConfig>,
   ) {}
+
+  @Get('/me')
+  @UseGuards(JwtAuthGuard)
+  async getMe(@CurrentUser() user: JwtUser): Promise<ApiResponse<AuthMeResponseDto>> {
+    const response = await this.authService.getAuthMe(user.userId);
+    return ApiResponse.success(response, HttpStatus.OK);
+  }
 
   @Get('/github')
   @UseGuards(AuthGuard('github'))
