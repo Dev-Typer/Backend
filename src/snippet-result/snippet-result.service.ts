@@ -73,7 +73,7 @@ export class SnippetResultService {
     if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
 
     const [rank, wordStats, wpmGraph] = await Promise.all([
-      this.snippetResultRepository.calcRank(result.snippetId, result.core),
+      this.snippetResultRepository.calcRank(result.snippetId, Number(result.core)),
       this.calcWordStats(result, snippet.content),
       this.calcWpmGraph(result),
     ]);

@@ -274,7 +274,7 @@ export class SnippetResultRepository {
             grouped AS (
                 SELECT day, day - (ROW_NUMBER() OVER (ORDER BY day))::int AS grp
                 FROM daily
-            )
+            ),
             counts AS (
                 SELECT COUNT(*) AS cnt
                 FROM grouped
