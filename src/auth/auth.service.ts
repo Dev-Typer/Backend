@@ -8,6 +8,7 @@ import { GithubProfileDto } from './dto/github-profile.dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './types/jwt-payload.interface';
 import { AuthRepository } from './auth.repository';
+import { AuthMeResponseDto } from './dto/auth-me-response.dto';
 import jwtConfig from '../config/jwt.config';
 
 @Injectable()
@@ -20,6 +21,12 @@ export class AuthService {
         @Inject(jwtConfig.KEY)
         private readonly jwtConf: ConfigType<typeof jwtConfig>,
     ) {}
+
+    async getAuthMe(userId: number): Promise<AuthMeResponseDto> {
+        const user = await this.userRepository.findById(userId);
+        if (!user) throw new BusinessException(AuthError.USER_NOT_FOUND);
+        return AuthMeResponseDto.from(user);
+    }
 
     async findOrCreateUser(profile: GithubProfileDto): Promise<User> {
         let user = await this.userRepository.findByGithubId(profile.githubId);

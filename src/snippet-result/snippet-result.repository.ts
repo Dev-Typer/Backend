@@ -297,6 +297,51 @@ export class SnippetResultRepository {
         return rows.length ? Number(rows[0].longest) : 0;
     }
 
+    // 유저의 스니펫별 최고 core 합산 — 홈 summary용
+    async getTotalCore(userId: number): Promise<number> {
+        const rows: { total_core: string }[] = await this.repo.query(`
+            SELECT COALESCE(SUM(best_core), 0) AS total_core
+            FROM (
+                SELECT "snippetId", MAX(core) AS best_core
+                FROM snippet_result
+                WHERE "userId" = $1
+                GROUP BY "snippetId"
+            ) sub
+        `, [userId]);
+        return Number(rows[0]?.total_core ?? 0);
+    }
+
+    // 현재 연속 제출 일수 — 오늘 제출 시 오늘 기준, 아니면 어제 기준
+    async getCurrentStreak(userId: number): Promise<number> {
+        const rows: { current_streak: string }[] = await this.repo.query(`
+            WITH daily AS (
+                SELECT DISTINCT ("createdAt" AT TIME ZONE 'UTC')::date AS day
+                FROM snippet_result
+                WHERE "userId" = $1
+            ),
+            base AS (
+                SELECT CASE
+                    WHEN EXISTS (SELECT 1 FROM daily WHERE day = (NOW() AT TIME ZONE 'UTC')::date)
+                    THEN (NOW() AT TIME ZONE 'UTC')::date
+                    ELSE (NOW() AT TIME ZONE 'UTC')::date - 1
+                END AS base_day
+            ),
+            numbered AS (
+                SELECT day,
+                       ROW_NUMBER() OVER (ORDER BY day DESC) - 1 AS rn
+                FROM daily
+                WHERE day <= (SELECT base_day FROM base)
+            ),
+            streak AS (
+                SELECT COUNT(*) AS current_streak
+                FROM numbered
+                WHERE day = (SELECT base_day FROM base) - rn
+            )
+            SELECT current_streak FROM streak
+        `, [userId]);
+        return rows.length ? Number(rows[0].current_streak) : 0;
+    }
+
     // 월별 평균 WPM — 최근 N개월
     async getWpmMonthlyHistory(
         userId: number,
