@@ -7,7 +7,7 @@ import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
 import type { UserCoreDto } from "./dto/user-core.dto";
 import type { UserCoreByLanguageDto } from "./dto/user-core-by-language.dto";
 import type { UserCoreHistoryDto } from "./dto/user-core-history.dto";
-import type { UserProfileDto } from "./dto/user-profile.dto";
+import type { UserMeResponseDto } from "./dto/user-me-response.dto";
 import type { UserStreakDto } from "./dto/user-streak.dto";
 import type { UserWpmHistoryDto } from "./dto/user-wpm-history.dto";
 import { UserService } from "./user.service";
@@ -23,8 +23,8 @@ export class UserController {
 
     @Get('/me')
     @UseGuards(JwtAuthGuard)
-    async getMeProfile(@CurrentUser() user: JwtUser): Promise<ApiResponse<UserProfileDto>> {
-        const response = await this.userService.getMeProfile(user.userId);
+    async getUserMe(@CurrentUser() user: JwtUser): Promise<ApiResponse<UserMeResponseDto>> {
+        const response = await this.userService.getUserMe(user.userId);
         return ApiResponse.success(response, HttpStatus.OK);
     }
 

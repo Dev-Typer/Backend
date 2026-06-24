@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
 import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-language.dto';
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
+import { UserMeResponseDto } from './dto/user-me-response.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
 import type { UserStreakDto, StreakDayEntry } from './dto/user-streak.dto';
 import type { UserWpmHistoryDto } from './dto/user-wpm-history.dto';
@@ -22,6 +23,16 @@ export class UserService {
     ) {}
 
     // ─── 프로필 조회 ───────────────────────────────────────────────────────────
+
+    async getUserMe(userId: number): Promise<UserMeResponseDto> {
+        const [user, totalCore, currentStreak] = await Promise.all([
+            this.userRepository.findById(userId),
+            this.snippetResultRepository.getTotalCore(userId),
+            this.snippetResultRepository.getCurrentStreak(userId),
+        ]);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+        return UserMeResponseDto.from(user, totalCore, currentStreak);
+    }
 
     async getMeProfile(userId: number): Promise<UserProfileDto> {
         const user = await this.userRepository.findById(userId);
