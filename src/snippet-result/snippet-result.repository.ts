@@ -28,6 +28,7 @@ export interface FullLeaderboardRow {
 export interface RankingRow {
     userId: number;
     username: string;
+    core: string;
     wpm: string;
     accuracy: string;
     createdAt: Date;
@@ -138,45 +139,37 @@ export class SnippetResultRepository {
         `, [snippetId, start, end]);
     }
 
-    // 스니펫별 랭킹 — 유저별 최고 기록 기준 상위 50위
+    // 스니펫별 랭킹 — 유저별 최고 core 플레이 한 행씩 추출, core DESC 상위 50위
     async findRankingBySnippet(snippetId: number): Promise<RankingRow[]> {
-        return this.repo
-            .createQueryBuilder('r')
-            .select('r.userId', 'userId')
-            .addSelect('u.username', 'username')
-            .addSelect('MAX(r.wpm)', 'wpm')
-            .addSelect('MAX(r.accuracy)', 'accuracy')
-            .addSelect('MAX(r.createdAt)', 'createdAt')
-            .innerJoin('r.user', 'u')
-            .where('r.snippetId = :snippetId', { snippetId })
-            .groupBy('r.userId')
-            .addGroupBy('u.username')
-            .orderBy('MAX(r.wpm)', 'DESC')
-            .addOrderBy('MAX(r.accuracy)', 'DESC')
-            .limit(50)
-            .getRawMany<RankingRow>();
+        return this.repo.query(`
+            SELECT best."userId", u.username, best.core, best.wpm, best.accuracy, best."createdAt"
+            FROM (
+                SELECT DISTINCT ON (r."userId")
+                    r."userId", r.core, r.wpm, r.accuracy, r."createdAt"
+                FROM snippet_result r
+                WHERE r."snippetId" = $1
+                ORDER BY r."userId", r.core DESC
+            ) best
+            JOIN "user" u ON u.id = best."userId"
+            ORDER BY best.core DESC
+            LIMIT 50
+        `, [snippetId]);
     }
 
-    // 유저별 최고 기록 기준 순위 계산
-    async calcRank(snippetId: number, myWpm: number): Promise<number> {
-        const raw = await this.repo
-            .createQueryBuilder('r')
-            .select('COUNT(DISTINCT r.userId)', 'count')
-            .where('r.snippetId = :snippetId')
-            .andWhere((qb) => {
-                const sub = qb
-                    .subQuery()
-                    .select('MAX(s.wpm)')
-                    .from(SnippetResult, 's')
-                    .where('s.snippetId = :snippetId')
-                    .andWhere('s.userId = r.userId')
-                    .getQuery();
-                return `(${sub}) > :myWpm`;
-            })
-            .setParameters({ snippetId, myWpm })
-            .getRawOne<{ count: string }>();
+    // 유저별 최고 core 기준 순위 계산
+    async calcRank(snippetId: number, myCore: number): Promise<number> {
+        const raw: { count: string }[] = await this.repo.query(`
+            SELECT COUNT(DISTINCT best."userId") AS count
+            FROM (
+                SELECT DISTINCT ON ("userId") "userId", core
+                FROM snippet_result
+                WHERE "snippetId" = $1
+                ORDER BY "userId", core DESC
+            ) best
+            WHERE best.core > $2
+        `, [snippetId, myCore]);
 
-        return Number(raw?.count ?? 0) + 1;
+        return Number(raw[0]?.count ?? 0) + 1;
     }
 
     // 유저의 스니펫별 최고 core — 언어 정보 포함, by-language 집계용

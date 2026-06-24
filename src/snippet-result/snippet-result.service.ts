@@ -73,7 +73,7 @@ export class SnippetResultService {
     if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
 
     const [rank, wordStats, wpmGraph] = await Promise.all([
-      this.snippetResultRepository.calcRank(result.snippetId, result.wpm),
+      this.snippetResultRepository.calcRank(result.snippetId, result.core),
       this.calcWordStats(result, snippet.content),
       this.calcWpmGraph(result),
     ]);
@@ -103,6 +103,7 @@ export class SnippetResultService {
       item.rank      = i + 1;
       item.userId    = row.userId;
       item.username  = row.username;
+      item.core      = Number(row.core);
       item.wpm       = Number(row.wpm);
       item.accuracy  = Number(row.accuracy);
       item.createdAt = row.createdAt;
