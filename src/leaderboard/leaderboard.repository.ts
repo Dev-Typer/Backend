@@ -20,7 +20,7 @@ export class LeaderboardRepository {
                     SELECT sr."userId", sr."snippetId", MAX(sr.core) AS best_core
                     FROM snippet_result sr
                     JOIN snippet s ON s.id = sr."snippetId"
-                        AND LOWER(s.language) = LOWER($1)
+                        AND LOWER(s.language::text) = LOWER($1)
                     GROUP BY sr."userId", sr."snippetId"
                 ),
                 totals AS (
@@ -35,7 +35,7 @@ export class LeaderboardRepository {
                            ROUND(AVG(sr2.accuracy)::numeric, 1) AS avg_accuracy
                     FROM snippet_result sr2
                     JOIN snippet s2 ON s2.id = sr2."snippetId"
-                        AND LOWER(s2.language) = LOWER($1)
+                        AND LOWER(s2.language::text) = LOWER($1)
                     GROUP BY sr2."userId"
                 ),
                 agg AS (
