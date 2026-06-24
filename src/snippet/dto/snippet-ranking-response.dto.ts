@@ -1,6 +1,7 @@
 import type { RankingRow } from '../../snippet-result/snippet-result.repository';
 
 export class SnippetRankingItemDto {
+    resultId!: number;
     rank!: number;
     userId!: number;
     username!: string;
@@ -14,6 +15,7 @@ export class SnippetRankingItemDto {
 
     static from(row: RankingRow, rank: number): SnippetRankingItemDto {
         const dto       = new SnippetRankingItemDto();
+        dto.resultId    = Number(row.resultId);
         dto.rank        = rank;
         dto.userId      = Number(row.userId);
         dto.username    = row.username;
