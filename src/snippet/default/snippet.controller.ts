@@ -5,6 +5,7 @@ import { SnippetResponseDto } from '../dto/snippet-response.dto';
 import { SnippetLikeResponseDto } from '../dto/snippet-like-response.dto';
 import { ApiResponse } from '../../common/dto/api-response';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUser } from '../../common/types/jwt-user.type';
 
@@ -12,11 +13,15 @@ import type { JwtUser } from '../../common/types/jwt-user.type';
 export class SnippetController {
   constructor(private readonly snippetService: SnippetService) {}
 
-  // GET /api/snippets?language=&difficulty=&page=&size=
-  // 활성 스니펫 목록 조회. 인증 불필요 (isActive: true 고정)
+  // GET /api/snippets?keyword=&language=&difficulty=&sort=&likedByMe=&playedByMe=&page=&size=
+  // 비로그인 가능. 로그인 시 isLiked, likedByMe, playedByMe 파라미터 활성화
   @Get()
-  async findAll(@Query() query: SnippetQueryDto): Promise<ApiResponse<{ data: SnippetResponseDto[]; total: number; page: number; size: number }>> {
-    const result = await this.snippetService.findAll(query);
+  @UseGuards(OptionalJwtAuthGuard)
+  async findAll(
+    @Query() query: SnippetQueryDto,
+    @CurrentUser() user: JwtUser | null,
+  ): Promise<ApiResponse<{ data: SnippetResponseDto[]; total: number; page: number; size: number }>> {
+    const result = await this.snippetService.findAll(query, user?.userId);
     return ApiResponse.success(result, HttpStatus.OK);
   }
 
@@ -29,9 +34,15 @@ export class SnippetController {
     return ApiResponse.success(snippet, HttpStatus.OK);
   }
 
+  // GET /api/snippets/:id
+  // 단건 조회. 비활성화된 스니펫은 404 반환
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<SnippetResponseDto>> {
+    const snippet = await this.snippetService.findOne(id);
+    return ApiResponse.success(snippet, HttpStatus.OK);
+  }
+
   // POST /api/snippets/:id/like
-  // 좋아요 추가. 이미 좋아요 상태면 현재 상태 그대로 반환 (멱등)
-  // ⚠️ /:id/like 는 /:id 보다 위에 있어야 함
   @Post(':id/like')
   @UseGuards(JwtAuthGuard)
   async like(
@@ -43,7 +54,6 @@ export class SnippetController {
   }
 
   // DELETE /api/snippets/:id/like
-  // 좋아요 취소. 이미 취소 상태면 현재 상태 그대로 반환 (멱등)
   @Delete(':id/like')
   @UseGuards(JwtAuthGuard)
   async unlike(
@@ -52,14 +62,6 @@ export class SnippetController {
   ): Promise<ApiResponse<SnippetLikeResponseDto>> {
     const result = await this.snippetService.unlike(id, user.userId);
     return ApiResponse.success(result, HttpStatus.OK);
-  }
-
-  // GET /api/snippets/:id
-  // 단건 조회. 비활성화된 스니펫은 404 반환
-  @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<SnippetResponseDto>> {
-    const snippet = await this.snippetService.findOne(id);
-    return ApiResponse.success(snippet, HttpStatus.OK);
   }
 
 }

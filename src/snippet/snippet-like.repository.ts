@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { SnippetLike } from './entities/snippet-like.entity';
 
 @Injectable()
@@ -28,8 +28,19 @@ export class SnippetLikeRepository {
     return (result.affected ?? 0) > 0;
   }
 
-  // userId 기준 좋아요한 snippetId 목록 — likedByMe 필터에서 사용
-  async findSnippetIdsByUser(userId: number): Promise<number[]> {
+  // 목록 조회 시 isLiked 배치 처리 — N+1 방지
+  // 주어진 snippetIds 중 userId가 좋아요한 것만 반환
+  async findLikedSnippetIds(userId: number, snippetIds: number[]): Promise<number[]> {
+    if (!snippetIds.length) return [];
+    const rows = await this.repo.find({
+      where: { userId, snippetId: In(snippetIds) },
+      select: { snippetId: true },
+    });
+    return rows.map(r => r.snippetId);
+  }
+
+  // likedByMe 필터용 — userId가 좋아요한 전체 snippetId 목록
+  async findAllLikedSnippetIds(userId: number): Promise<number[]> {
     const rows = await this.repo.find({
       where: { userId },
       select: { snippetId: true },
@@ -37,7 +48,6 @@ export class SnippetLikeRepository {
     return rows.map(r => r.snippetId);
   }
 
-  // 특정 유저가 해당 스니펫을 좋아요했는지 여부
   async existsByUserAndSnippet(userId: number, snippetId: number): Promise<boolean> {
     return this.repo.existsBy({ userId, snippetId });
   }

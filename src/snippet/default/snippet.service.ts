@@ -24,18 +24,23 @@ export class SnippetService {
         private readonly snippetLikeRepository: SnippetLikeRepository,
     ) {}
 
-    // 활성화된 스니펫 목록 조회 — isActive: true 고정
-    async findAll(query: SnippetQueryDto): Promise<SnippetListResponse> {
-        const { language, difficulty, page = 1, size = 10 } = query;
+    // 활성화된 스니펫 목록 조회 — 검색/필터/정렬
+    async findAll(query: SnippetQueryDto, userId?: number): Promise<SnippetListResponse> {
+        const { page = 1, size = 10 } = query;
 
-        const [items, total] = await this.snippetRepository.findActiveList(
-            language,
-            difficulty,
+        const [items, total] = await this.snippetRepository.findActiveList(query, userId);
+
+        // isLiked 배치 처리 — N+1 방지, 총 쿼리 2회
+        const likedIds = userId && items.length
+            ? new Set(await this.snippetLikeRepository.findLikedSnippetIds(userId, items.map(s => s.id)))
+            : new Set<number>();
+
+        return {
+            data: items.map(s => SnippetResponseDto.from(s, likedIds.has(s.id))),
+            total,
             page,
             size,
-        );
-
-        return { data: items.map(s => SnippetResponseDto.from(s)), total, page, size };
+        };
     }
 
     // 단건 조회 — 활성화된 스니펫만 반환
@@ -52,27 +57,29 @@ export class SnippetService {
         return SnippetResponseDto.from(snippet);
     }
 
-    // 좋아요 추가 — 이미 좋아요 상태면 현재 상태 그대로 반환 (멱등)
     @Transactional()
     async like(snippetId: number, userId: number): Promise<SnippetLikeResponseDto> {
         const snippet = await this.snippetRepository.findActiveById(snippetId);
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
-
         const inserted = await this.snippetLikeRepository.insertIfNotExists(userId, snippetId);
         if (inserted) await this.snippetRepository.incrementLikeCount(snippetId);
-
-        return { likeCount: snippet.likeCount + (inserted ? 1 : 0), isLiked: true };
+        const updated = await this.snippetRepository.findActiveById(snippetId);
+        const dto = new SnippetLikeResponseDto();
+        dto.likeCount = updated!.likeCount;
+        dto.isLiked = true;
+        return dto;
     }
 
-    // 좋아요 취소 — 이미 취소 상태면 현재 상태 그대로 반환 (멱등)
     @Transactional()
     async unlike(snippetId: number, userId: number): Promise<SnippetLikeResponseDto> {
         const snippet = await this.snippetRepository.findActiveById(snippetId);
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
-
         const deleted = await this.snippetLikeRepository.deleteIfExists(userId, snippetId);
         if (deleted) await this.snippetRepository.decrementLikeCount(snippetId);
-
-        return { likeCount: Math.max(0, snippet.likeCount - (deleted ? 1 : 0)), isLiked: false };
+        const updated = await this.snippetRepository.findActiveById(snippetId);
+        const dto = new SnippetLikeResponseDto();
+        dto.likeCount = updated!.likeCount;
+        dto.isLiked = false;
+        return dto;
     }
 }
