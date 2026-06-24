@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { TokenExpiredError } from 'jsonwebtoken';
 import type { ConfigType } from '@nestjs/config';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { AuthError } from '../common/exceptions/error-code';
@@ -68,19 +69,15 @@ export class AuthService {
     async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
         try {
             this.jwtService.verify<JwtPayload>(refreshToken);
-        } catch {
+        } catch (e) {
+            if (e instanceof TokenExpiredError) {
+                throw new BusinessException(AuthError.EXPIRED_REFRESH_TOKEN);
+            }
             throw new BusinessException(AuthError.INVALID_REFRESH_TOKEN);
         }
 
         const record = await this.authRepository.findValid(refreshToken);
-
-        if (!record) {
-            throw new BusinessException(AuthError.REVOKED_REFRESH_TOKEN);
-        }
-
-        if (record.expiresAt < new Date()) {
-            throw new BusinessException(AuthError.EXPIRED_REFRESH_TOKEN);
-        }
+        if (!record) throw new BusinessException(AuthError.REVOKED_REFRESH_TOKEN);
 
         const user = await this.userRepository.findById(record.userId);
         if (!user) throw new BusinessException(AuthError.USER_NOT_FOUND);
