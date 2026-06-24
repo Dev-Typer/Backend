@@ -315,15 +315,15 @@ export class SnippetResultRepository {
     async getCurrentStreak(userId: number): Promise<number> {
         const rows: { current_streak: string }[] = await this.repo.query(`
             WITH daily AS (
-                SELECT DISTINCT "createdAt"::date AS day
+                SELECT DISTINCT ("createdAt" AT TIME ZONE 'UTC')::date AS day
                 FROM snippet_result
                 WHERE "userId" = $1
             ),
             base AS (
                 SELECT CASE
-                    WHEN EXISTS (SELECT 1 FROM daily WHERE day = CURRENT_DATE)
-                    THEN CURRENT_DATE
-                    ELSE CURRENT_DATE - 1
+                    WHEN EXISTS (SELECT 1 FROM daily WHERE day = (NOW() AT TIME ZONE 'UTC')::date)
+                    THEN (NOW() AT TIME ZONE 'UTC')::date
+                    ELSE (NOW() AT TIME ZONE 'UTC')::date - 1
                 END AS base_day
             ),
             numbered AS (
