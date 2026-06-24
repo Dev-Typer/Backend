@@ -93,28 +93,19 @@ export class SnippetResultService {
     return dto;
   }
 
-  // 스니펫별 랭킹 — 유저별 최고 기록 기준 상위 50위
-  async findRanking(snippetId: number): Promise<SnippetRankingResponseDto> {
+  // 스니펫별 랭킹 — 유저별 최고 기록 기준 core DESC 페이지네이션
+  async findRanking(snippetId: number, page: number, size: number): Promise<SnippetRankingResponseDto> {
     const snippet = await this.snippetRepository.findById(snippetId);
     if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
 
-    const rows = await this.snippetResultRepository.findRankingBySnippet(snippetId);
+    const { rows, total } = await this.snippetResultRepository.findRankingBySnippet(snippetId, page, size);
+    const offset = (page - 1) * size;
 
-    const items: SnippetRankingItemDto[] = rows.map((row, i) => {
-      const item = new SnippetRankingItemDto();
-      item.rank      = i + 1;
-      item.userId    = row.userId;
-      item.username  = row.username;
-      item.core      = Number(row.core);
-      item.wpm       = Number(row.wpm);
-      item.accuracy  = Number(row.accuracy);
-      item.createdAt = row.createdAt;
-      return item;
-    });
-
-    const dto = new SnippetRankingResponseDto();
-    dto.items = items;
-    dto.total = items.length;
+    const dto    = new SnippetRankingResponseDto();
+    dto.items    = rows.map((row, i) => SnippetRankingItemDto.from(row, offset + i + 1));
+    dto.total    = total;
+    dto.page     = page;
+    dto.size     = size;
     return dto;
   }
 
