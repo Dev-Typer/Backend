@@ -1,8 +1,10 @@
-import { Controller, Get, HttpStatus, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, HttpStatus, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { SnippetService } from './snippet.service';
 import { SnippetQueryDto, RandomSnippetQueryDto } from '../dto/snippet-query.dto';
 import { SnippetResponseDto } from '../dto/snippet-response.dto';
+import { SnippetLikeResponseDto } from '../dto/snippet-like-response.dto';
 import { ApiResponse } from '../../common/dto/api-response';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUser } from '../../common/types/jwt-user.type';
@@ -38,6 +40,28 @@ export class SnippetController {
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<SnippetResponseDto>> {
     const snippet = await this.snippetService.findOne(id);
     return ApiResponse.success(snippet, HttpStatus.OK);
+  }
+
+  // POST /api/snippets/:id/like
+  @Post(':id/like')
+  @UseGuards(JwtAuthGuard)
+  async like(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtUser,
+  ): Promise<ApiResponse<SnippetLikeResponseDto>> {
+    const result = await this.snippetService.like(id, user.userId);
+    return ApiResponse.success(result, HttpStatus.OK);
+  }
+
+  // DELETE /api/snippets/:id/like
+  @Delete(':id/like')
+  @UseGuards(JwtAuthGuard)
+  async unlike(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtUser,
+  ): Promise<ApiResponse<SnippetLikeResponseDto>> {
+    const result = await this.snippetService.unlike(id, user.userId);
+    return ApiResponse.success(result, HttpStatus.OK);
   }
 
 }

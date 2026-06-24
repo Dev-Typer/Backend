@@ -123,6 +123,19 @@ export class SnippetRepository {
         return this.repo.find({ where: { isActive: true } });
     }
 
+    async incrementLikeCount(snippetId: number): Promise<void> {
+        await this.repo.increment({ id: snippetId }, 'likeCount', 1);
+    }
+
+    async decrementLikeCount(snippetId: number): Promise<void> {
+        await this.repo
+            .createQueryBuilder()
+            .update(Snippet)
+            .set({ likeCount: () => 'GREATEST("likeCount" - 1, 0)' })
+            .where('id = :id', { id: snippetId })
+            .execute();
+    }
+
     // 결과 저장 시 playCount +1, avgWpm 갱신
     async incrementStats(snippetId: number, wpm: number): Promise<void> {
         await this.repo

@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { Transactional } from 'typeorm-transactional';
 import { SnippetRepository } from './snippet.repository';
 import { SnippetLikeRepository } from '../snippet-like.repository';
 import { SnippetQueryDto } from '../dto/snippet-query.dto';
 import { SnippetResponseDto } from '../dto/snippet-response.dto';
+import { SnippetLikeResponseDto } from '../dto/snippet-like-response.dto';
 import { Language } from '../../common/types/language.type';
 import { SnippetDifficulty } from '../enums/snippt-difficulty.enum';
 import { BusinessException } from '../../common/exceptions/business.exception';
@@ -53,5 +55,31 @@ export class SnippetService {
         const snippet = await this.snippetRepository.findRandom(language, difficulty);
         if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
         return SnippetResponseDto.from(snippet);
+    }
+
+    @Transactional()
+    async like(snippetId: number, userId: number): Promise<SnippetLikeResponseDto> {
+        const snippet = await this.snippetRepository.findActiveById(snippetId);
+        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+        const inserted = await this.snippetLikeRepository.insertIfNotExists(userId, snippetId);
+        if (inserted) await this.snippetRepository.incrementLikeCount(snippetId);
+        const updated = await this.snippetRepository.findActiveById(snippetId);
+        const dto = new SnippetLikeResponseDto();
+        dto.likeCount = updated!.likeCount;
+        dto.isLiked = true;
+        return dto;
+    }
+
+    @Transactional()
+    async unlike(snippetId: number, userId: number): Promise<SnippetLikeResponseDto> {
+        const snippet = await this.snippetRepository.findActiveById(snippetId);
+        if (!snippet) throw new BusinessException(SnippetError.NOT_FOUND);
+        const deleted = await this.snippetLikeRepository.deleteIfExists(userId, snippetId);
+        if (deleted) await this.snippetRepository.decrementLikeCount(snippetId);
+        const updated = await this.snippetRepository.findActiveById(snippetId);
+        const dto = new SnippetLikeResponseDto();
+        dto.likeCount = updated!.likeCount;
+        dto.isLiked = false;
+        return dto;
     }
 }
