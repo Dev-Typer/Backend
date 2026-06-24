@@ -1,18 +1,25 @@
-import { Controller, Get, HttpStatus, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
 import { SnippetService } from './snippet.service';
 import { SnippetQueryDto, RandomSnippetQueryDto } from '../dto/snippet-query.dto';
 import { SnippetResponseDto } from '../dto/snippet-response.dto';
 import { ApiResponse } from '../../common/dto/api-response';
+import { OptionalJwtAuthGuard } from '../../auth/guards/optional-jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { JwtUser } from '../../common/types/jwt-user.type';
 
 @Controller('/api/snippets')
 export class SnippetController {
   constructor(private readonly snippetService: SnippetService) {}
 
-  // GET /api/snippets?language=&difficulty=&page=&size=
-  // 활성 스니펫 목록 조회. 인증 불필요 (isActive: true 고정)
+  // GET /api/snippets?keyword=&language=&difficulty=&sort=&likedByMe=&playedByMe=&page=&size=
+  // 비로그인 가능. 로그인 시 isLiked, likedByMe, playedByMe 파라미터 활성화
   @Get()
-  async findAll(@Query() query: SnippetQueryDto): Promise<ApiResponse<{ data: SnippetResponseDto[]; total: number; page: number; size: number }>> {
-    const result = await this.snippetService.findAll(query);
+  @UseGuards(OptionalJwtAuthGuard)
+  async findAll(
+    @Query() query: SnippetQueryDto,
+    @CurrentUser() user: JwtUser | null,
+  ): Promise<ApiResponse<{ data: SnippetResponseDto[]; total: number; page: number; size: number }>> {
+    const result = await this.snippetService.findAll(query, user?.userId);
     return ApiResponse.success(result, HttpStatus.OK);
   }
 
