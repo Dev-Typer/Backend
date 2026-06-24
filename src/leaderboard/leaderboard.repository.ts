@@ -23,27 +23,35 @@ export class LeaderboardRepository {
                         AND LOWER(s.language) = LOWER($1)
                     GROUP BY sr."userId", sr."snippetId"
                 ),
-                lang_results AS (
-                    SELECT sr2."userId", sr2.id, sr2."snippetId", sr2.wpm, sr2.accuracy
+                totals AS (
+                    SELECT "userId", COALESCE(SUM(best_core), 0) AS "totalCore"
+                    FROM best GROUP BY "userId"
+                ),
+                play_stats AS (
+                    SELECT sr2."userId",
+                           COUNT(*) AS play_count,
+                           ROUND(AVG(sr2.wpm)::numeric, 1) AS avg_wpm,
+                           COUNT(DISTINCT sr2."snippetId") AS snippet_count,
+                           ROUND(AVG(sr2.accuracy)::numeric, 1) AS avg_accuracy
                     FROM snippet_result sr2
                     JOIN snippet s2 ON s2.id = sr2."snippetId"
                         AND LOWER(s2.language) = LOWER($1)
+                    GROUP BY sr2."userId"
                 ),
                 agg AS (
                     SELECT
-                        u.id                                                AS "userId",
+                        u.id                                  AS "userId",
                         u.username,
                         u."profileUrl",
-                        COALESCE(SUM(b.best_core), 0)                      AS "totalCore",
-                        COALESCE(ROUND(AVG(lr.wpm)::numeric, 1), 0)        AS "avgWpm",
-                        COUNT(lr.id)                                        AS "playCount",
-                        COUNT(DISTINCT lr."snippetId")                      AS "snippetCount",
-                        COALESCE(ROUND(AVG(lr.accuracy)::numeric, 1), 0)   AS "avgAccuracy"
+                        COALESCE(t."totalCore", 0)            AS "totalCore",
+                        COALESCE(ps.avg_wpm, 0)               AS "avgWpm",
+                        COALESCE(ps.play_count, 0)            AS "playCount",
+                        COALESCE(ps.snippet_count, 0)         AS "snippetCount",
+                        COALESCE(ps.avg_accuracy, 0)          AS "avgAccuracy"
                     FROM "user" u
-                    LEFT JOIN best b         ON b."userId" = u.id
-                    LEFT JOIN lang_results lr ON lr."userId" = u.id
+                    LEFT JOIN totals t     ON t."userId" = u.id
+                    LEFT JOIN play_stats ps ON ps."userId" = u.id
                     WHERE u.role = 'USER'
-                    GROUP BY u.id
                 ),
                 ranked AS (
                     SELECT *, RANK() OVER (ORDER BY "totalCore" DESC)::int AS rank
@@ -59,25 +67,37 @@ export class LeaderboardRepository {
 
         return this.dataSource.query(`
             WITH best AS (
-                SELECT sr."userId", sr."snippetId", MAX(sr.core) AS best_core
-                FROM snippet_result sr
-                GROUP BY sr."userId", sr."snippetId"
+                SELECT "userId", "snippetId", MAX(core) AS best_core
+                FROM snippet_result
+                GROUP BY "userId", "snippetId"
+            ),
+            totals AS (
+                SELECT "userId", COALESCE(SUM(best_core), 0) AS "totalCore"
+                FROM best GROUP BY "userId"
+            ),
+            play_stats AS (
+                SELECT "userId",
+                       COUNT(*) AS play_count,
+                       ROUND(AVG(wpm)::numeric, 1) AS avg_wpm,
+                       COUNT(DISTINCT "snippetId") AS snippet_count,
+                       ROUND(AVG(accuracy)::numeric, 1) AS avg_accuracy
+                FROM snippet_result
+                GROUP BY "userId"
             ),
             agg AS (
                 SELECT
-                    u.id                                                AS "userId",
+                    u.id                                  AS "userId",
                     u.username,
                     u."profileUrl",
-                    COALESCE(SUM(b.best_core), 0)                      AS "totalCore",
-                    COALESCE(ROUND(AVG(sr2.wpm)::numeric, 1), 0)       AS "avgWpm",
-                    COUNT(sr2.id)                                       AS "playCount",
-                    COUNT(DISTINCT sr2."snippetId")                     AS "snippetCount",
-                    COALESCE(ROUND(AVG(sr2.accuracy)::numeric, 1), 0)  AS "avgAccuracy"
+                    COALESCE(t."totalCore", 0)            AS "totalCore",
+                    COALESCE(ps.avg_wpm, 0)               AS "avgWpm",
+                    COALESCE(ps.play_count, 0)            AS "playCount",
+                    COALESCE(ps.snippet_count, 0)         AS "snippetCount",
+                    COALESCE(ps.avg_accuracy, 0)          AS "avgAccuracy"
                 FROM "user" u
-                LEFT JOIN best b          ON b."userId" = u.id
-                LEFT JOIN snippet_result sr2 ON sr2."userId" = u.id
+                LEFT JOIN totals t     ON t."userId" = u.id
+                LEFT JOIN play_stats ps ON ps."userId" = u.id
                 WHERE u.role = 'USER'
-                GROUP BY u.id
             ),
             ranked AS (
                 SELECT *, RANK() OVER (ORDER BY "totalCore" DESC)::int AS rank
@@ -97,7 +117,7 @@ export class LeaderboardRepository {
         if (language) {
             rows = await this.dataSource.query(`
                 WITH best AS (
-                    SELECT sr."userId", MAX(sr.core) AS best_core
+                    SELECT sr."userId", sr."snippetId", MAX(sr.core) AS best_core
                     FROM snippet_result sr
                     JOIN snippet s ON s.id = sr."snippetId"
                         AND LOWER(s.language) = LOWER($2)
