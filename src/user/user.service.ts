@@ -112,14 +112,14 @@ export class UserService {
             cursor.setDate(cursor.getDate() + 1);
         }
 
-        // current: 어제부터 역순으로 연속 제출일 수
+        // current: 오늘 플레이했으면 오늘부터, 아니면 어제부터 역순으로 연속 제출일 수
         const yesterday = new Date(now);
         yesterday.setUTCDate(yesterday.getUTCDate() - 1);
         let current = 0;
-        const check = new Date(yesterday);
+        const check = submittedSet.has(todayStr) ? new Date(now) : new Date(yesterday);
         while (submittedSet.has(check.toISOString().slice(0, 10))) {
             current++;
-            check.setDate(check.getDate() - 1);
+            check.setUTCDate(check.getUTCDate() - 1);
         }
 
         return {
