@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { SnippetAdminRepository } from './snippet-admin.repository';
 import { CreateSnippetDto } from '../dto/create-snippet.dto';
 import { UpdateSnippetDto } from '../dto/update-snippet.dto';
+import { AdminSnippetQueryDto } from '../dto/snippet-query.dto';
 import { SnippetResponseDto } from '../dto/snippet-response.dto';
+import { SnippetListResponse } from '../default/snippet.service';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { SnippetError } from '../../common/exceptions/error-code';
 
@@ -11,6 +13,14 @@ export class SnippetAdminService {
     constructor(
         private readonly snippetAdminRepository: SnippetAdminRepository,
     ) {}
+
+    async findAll(query: AdminSnippetQueryDto): Promise<SnippetListResponse> {
+        const { language, difficulty, isActive, page = 1, size = 10 } = query;
+        const [items, total] = await this.snippetAdminRepository.findAll(
+            language, difficulty, isActive, page, size,
+        );
+        return { data: items.map(SnippetResponseDto.from), total, page, size };
+    }
 
     async create(dto: CreateSnippetDto): Promise<SnippetResponseDto> {
         const snippet = await this.snippetAdminRepository.save(
