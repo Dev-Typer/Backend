@@ -51,8 +51,7 @@ export class LeaderboardRepository {
                     FROM "user" u
                     LEFT JOIN totals t     ON t."userId" = u.id
                     LEFT JOIN play_stats ps ON ps."userId" = u.id
-                    WHERE u.role = 'USER'
-                ),
+                    ),
                 ranked AS (
                     SELECT *, RANK() OVER (ORDER BY "totalCore" DESC)::int AS rank
                     FROM agg
@@ -97,7 +96,6 @@ export class LeaderboardRepository {
                 FROM "user" u
                 LEFT JOIN totals t     ON t."userId" = u.id
                 LEFT JOIN play_stats ps ON ps."userId" = u.id
-                WHERE u.role = 'USER'
             ),
             ranked AS (
                 SELECT *, RANK() OVER (ORDER BY "totalCore" DESC)::int AS rank
@@ -120,7 +118,7 @@ export class LeaderboardRepository {
                     SELECT sr."userId", sr."snippetId", MAX(sr.core) AS best_core
                     FROM snippet_result sr
                     JOIN snippet s ON s.id = sr."snippetId"
-                        AND LOWER(s.language) = LOWER($2)
+                        AND LOWER(s.language::text) = LOWER($2)
                     GROUP BY sr."userId", sr."snippetId"
                 ),
                 totals AS (
@@ -128,8 +126,10 @@ export class LeaderboardRepository {
                     FROM best GROUP BY "userId"
                 ),
                 ranked AS (
-                    SELECT "userId", RANK() OVER (ORDER BY "totalCore" DESC)::int AS rank
-                    FROM totals WHERE "totalCore" > 0
+                    SELECT t."userId", RANK() OVER (ORDER BY t."totalCore" DESC)::int AS rank
+                    FROM totals t
+                    JOIN "user" u ON u.id = t."userId"
+                    WHERE t."totalCore" > 0
                 )
                 SELECT rank FROM ranked WHERE "userId" = $1
             `, [userId, language]);
@@ -145,8 +145,10 @@ export class LeaderboardRepository {
                     FROM best GROUP BY "userId"
                 ),
                 ranked AS (
-                    SELECT "userId", RANK() OVER (ORDER BY "totalCore" DESC)::int AS rank
-                    FROM totals WHERE "totalCore" > 0
+                    SELECT t."userId", RANK() OVER (ORDER BY t."totalCore" DESC)::int AS rank
+                    FROM totals t
+                    JOIN "user" u ON u.id = t."userId"
+                    WHERE t."totalCore" > 0
                 )
                 SELECT rank FROM ranked WHERE "userId" = $1
             `, [userId]);
@@ -178,13 +180,12 @@ export class LeaderboardRepository {
                     END AS base_day
                 FROM "user" u
                 LEFT JOIN today_submitters ts ON ts."userId" = u.id
-                WHERE u.role = 'USER'
             ),
             numbered AS (
                 SELECT
                     d."userId",
                     d.day,
-                    ROW_NUMBER() OVER (PARTITION BY d."userId" ORDER BY d.day DESC) - 1 AS rn,
+                    (ROW_NUMBER() OVER (PARTITION BY d."userId" ORDER BY d.day DESC) - 1)::int AS rn,
                     b.base_day
                 FROM all_daily d
                 JOIN base_days b ON b."userId" = d."userId"
@@ -206,7 +207,6 @@ export class LeaderboardRepository {
                 FROM "user" u
                 JOIN streak_calc s ON s."userId" = u.id
                 WHERE s.current_streak > 0
-                  AND u.role = 'USER'
             )
             SELECT *, COUNT(*) OVER()::int AS total_count
             FROM ranked
@@ -237,13 +237,12 @@ export class LeaderboardRepository {
                     END AS base_day
                 FROM "user" u
                 LEFT JOIN today_submitters ts ON ts."userId" = u.id
-                WHERE u.role = 'USER'
             ),
             numbered AS (
                 SELECT
                     d."userId",
                     d.day,
-                    ROW_NUMBER() OVER (PARTITION BY d."userId" ORDER BY d.day DESC) - 1 AS rn,
+                    (ROW_NUMBER() OVER (PARTITION BY d."userId" ORDER BY d.day DESC) - 1)::int AS rn,
                     b.base_day
                 FROM all_daily d
                 JOIN base_days b ON b."userId" = d."userId"
@@ -262,7 +261,6 @@ export class LeaderboardRepository {
                 FROM streak_calc s
                 JOIN "user" u ON u.id = s."userId"
                 WHERE s.current_streak > 0
-                  AND u.role = 'USER'
             )
             SELECT rank FROM ranked WHERE "userId" = $1
         `, [userId]);

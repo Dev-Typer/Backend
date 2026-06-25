@@ -355,7 +355,7 @@ export class SnippetResultRepository {
             ),
             numbered AS (
                 SELECT day,
-                       ROW_NUMBER() OVER (ORDER BY day DESC) - 1 AS rn
+                       (ROW_NUMBER() OVER (ORDER BY day DESC) - 1)::int AS rn
                 FROM daily
                 WHERE day <= (SELECT base_day FROM base)
             ),
