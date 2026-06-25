@@ -127,6 +127,8 @@ export class DailyChallengeService {
             rank: i + 1,
             userId: row.userId,
             username: row.username,
+            profileUrl: row.profileUrl,
+            core: Number(row.core),
             wpm: Number(row.wpm),
             nWpm: Number(row.nWpm),
             accuracy: Number(row.accuracy),
