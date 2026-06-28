@@ -9,6 +9,7 @@ import type { UserCoreByLanguageDto } from "./dto/user-core-by-language.dto";
 import type { UserCoreHistoryDto } from "./dto/user-core-history.dto";
 import type { UserMeResponseDto } from "./dto/user-me-response.dto";
 import type { UserStreakDto } from "./dto/user-streak.dto";
+import type { CurrentStreakResponseDto } from "./dto/current-streak-response.dto";
 import type { UserWpmHistoryDto } from "./dto/user-wpm-history.dto";
 import { UserService } from "./user.service";
 import type { ImageFile } from "src/common/storage/r2.service";
@@ -78,6 +79,13 @@ export class UserController {
             year ? Number(year) : undefined,
             type,
         );
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get('/me/current-streak')
+    @UseGuards(JwtAuthGuard)
+    async getCurrentStreak(@CurrentUser() user: JwtUser): Promise<ApiResponse<CurrentStreakResponseDto>> {
+        const response = await this.userService.getCurrentStreak(user.userId);
         return ApiResponse.success(response, HttpStatus.OK);
     }
 
