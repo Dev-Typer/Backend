@@ -26,6 +26,7 @@ export interface FullLeaderboardRow {
 }
 
 export interface RankingRow {
+    resultId: number;
     userId: number;
     username: string;
     profileUrl: string | null;
@@ -151,6 +152,7 @@ export class SnippetResultRepository {
         const offset = (page - 1) * size;
         const rows: RankingRow[] = await this.repo.query(`
             SELECT
+                best.id AS "resultId",
                 best."userId",
                 u.username,
                 u."profileUrl",
@@ -162,7 +164,7 @@ export class SnippetResultRepository {
                 best."createdAt"
             FROM (
                 SELECT DISTINCT ON (r."userId")
-                    r."userId", r.core, r.wpm, r."rawWpm", r.accuracy, r."durationSec", r."createdAt"
+                    r.id, r."userId", r.core, r.wpm, r."rawWpm", r.accuracy, r."durationSec", r."createdAt"
                 FROM snippet_result r
                 WHERE r."snippetId" = $1
                 ORDER BY r."userId", r.core DESC
@@ -353,7 +355,7 @@ export class SnippetResultRepository {
             ),
             numbered AS (
                 SELECT day,
-                       ROW_NUMBER() OVER (ORDER BY day DESC) - 1 AS rn
+                       (ROW_NUMBER() OVER (ORDER BY day DESC) - 1)::int AS rn
                 FROM daily
                 WHERE day <= (SELECT base_day FROM base)
             ),
