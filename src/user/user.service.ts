@@ -28,7 +28,7 @@ export class UserService {
         const [user, totalCore, currentStreak] = await Promise.all([
             this.userRepository.findById(userId),
             this.snippetResultRepository.getTotalCore(userId),
-            this.snippetResultRepository.getCurrentStreak(userId),
+            this.fetchCurrentStreak(userId),
         ]);
         if (!user) throw new BusinessException(UserError.NOT_FOUND);
         return UserMeResponseDto.from(user, totalCore, currentStreak);
@@ -86,6 +86,31 @@ export class UserService {
 
     // ─── Streak ───────────────────────────────────────────────────────────────
 
+    // getMeStreak / getUserMe / getCurrentStreak 공통 로직
+    // getStreakDayData dayRows에서 현재 연속 제출일 수 계산
+    private static computeCurrentStreak(dayRows: { day: string }[], now: Date): number {
+        const todayStr  = now.toISOString().slice(0, 10);
+        const submitted = new Set(dayRows.map(r => r.day));
+        const yesterday = new Date(now);
+        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+        let current = 0;
+        const check = submitted.has(todayStr) ? new Date(now) : new Date(yesterday);
+        while (submitted.has(check.toISOString().slice(0, 10))) {
+            current++;
+            check.setUTCDate(check.getUTCDate() - 1);
+        }
+        return current;
+    }
+
+    // getUserMe / getCurrentStreak endpoint에서 사용하는 경량 streak fetch
+    private async fetchCurrentStreak(userId: number): Promise<number> {
+        const now      = new Date();
+        const todayStr = now.toISOString().slice(0, 10);
+        const startStr = new Date(now.getTime() - 364 * 86400 * 1000).toISOString().slice(0, 10);
+        const dayRows  = await this.snippetResultRepository.getStreakDayData(userId, startStr, todayStr);
+        return UserService.computeCurrentStreak(dayRows, now);
+    }
+
     async getMeStreak(userId: number, year?: number, type?: string): Promise<UserStreakDto> {
         const isRecent = type === 'recent';
 
@@ -117,15 +142,7 @@ export class UserService {
             cursor.setDate(cursor.getDate() + 1);
         }
 
-        // current: 오늘 플레이했으면 오늘부터, 아니면 어제부터 역순으로 연속 제출일 수
-        const yesterday = new Date(now);
-        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-        let current = 0;
-        const check = submittedSet.has(todayStr) ? new Date(now) : new Date(yesterday);
-        while (submittedSet.has(check.toISOString().slice(0, 10))) {
-            current++;
-            check.setUTCDate(check.getUTCDate() - 1);
-        }
+        const current = UserService.computeCurrentStreak(dayRows, now);
 
         return {
             userId,
@@ -138,7 +155,7 @@ export class UserService {
     }
 
     async getCurrentStreak(userId: number): Promise<CurrentStreakResponseDto> {
-        const currentStreak = await this.snippetResultRepository.getCurrentStreak(userId);
+        const currentStreak = await this.fetchCurrentStreak(userId);
         return CurrentStreakResponseDto.from(currentStreak);
     }
 
