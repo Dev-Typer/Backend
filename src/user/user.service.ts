@@ -5,6 +5,7 @@ import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-histo
 import { UserMeResponseDto } from './dto/user-me-response.dto';
 import type { UserStreakDto, StreakDayEntry } from './dto/user-streak.dto';
 import type { UserWpmHistoryDto } from './dto/user-wpm-history.dto';
+import { CurrentStreakResponseDto } from './dto/current-streak-response.dto';
 import { SnippetResultRepository } from 'src/snippet-result/snippet-result.repository';
 import { UserRepository } from './user.repository';
 import { R2StorageService } from 'src/common/storage/r2.service';
@@ -134,6 +135,11 @@ export class UserService {
             longest,
             yearData,
         };
+    }
+
+    async getCurrentStreak(userId: number): Promise<CurrentStreakResponseDto> {
+        const currentStreak = await this.snippetResultRepository.getCurrentStreak(userId);
+        return CurrentStreakResponseDto.from(currentStreak);
     }
 
     // ─── WPM 추이 ─────────────────────────────────────────────────────────────
