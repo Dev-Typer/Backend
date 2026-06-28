@@ -85,7 +85,7 @@ export class DailyChallengeService {
                          : rankDelta! < 0 ? RankChangeStatus.DOWN
                          :                  RankChangeStatus.SAME;
 
-        const bestStatus = !beforeRankInfo || Number(afterRankInfo.nWpm) > Number(beforeRankInfo.nWpm)
+        const bestStatus = !beforeRankInfo || Number(afterRankInfo.core) > Number(beforeRankInfo.core)
             ? BestStatus.NEW_BEST
             : BestStatus.NOT_BEST;
 
