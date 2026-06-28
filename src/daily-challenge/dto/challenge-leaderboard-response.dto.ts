@@ -11,6 +11,10 @@ export class LeaderboardItem {
   userId!: number;
   /** 유저명 */
   username!: string;
+  /** 프로필 이미지 URL */
+  profileUrl!: string | null;
+  /** CORE 점수 */
+  core!: number;
   /** 정타 WPM */
   wpm!: number;
   /** 정규화 WPM (wpm * accuracy / 100) */

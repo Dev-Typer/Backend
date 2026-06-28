@@ -19,8 +19,10 @@ export interface NearbyRow {
 export interface FullLeaderboardRow {
     userId: number;
     username: string;
+    profileUrl: string | null;
     wpm: string;
     nWpm: string;
+    core: string;
     accuracy: string;
     durationSec: number;
 }
@@ -126,19 +128,19 @@ export class SnippetResultRepository {
         end: Date,
     ): Promise<FullLeaderboardRow[]> {
         return this.repo.query(`
-            SELECT sub."userId", u.username, sub.wpm, sub."nWpm", sub.accuracy, sub."durationSec"
+            SELECT sub."userId", u.username, u."profileUrl", sub.wpm, sub."nWpm", sub.core, sub.accuracy, sub."durationSec"
             FROM (
                 SELECT DISTINCT ON (r."userId")
-                    r."userId", r.wpm, r."nWpm", r.accuracy, r."durationSec"
+                    r."userId", r.wpm, r."nWpm", r.core, r.accuracy, r."durationSec"
                 FROM snippet_result r
                 WHERE r."snippetId" = $1
                   AND r."isDaily" = true
                   AND r."createdAt" >= $2
                   AND r."createdAt" < $3
-                ORDER BY r."userId", r."nWpm" DESC, r.accuracy DESC, r."durationSec" ASC
+                ORDER BY r."userId", r.core DESC, r."nWpm" DESC, r.accuracy DESC, r."durationSec" ASC
             ) sub
             JOIN "user" u ON u.id = sub."userId"
-            ORDER BY sub."nWpm" DESC, sub.accuracy DESC, sub."durationSec" ASC
+            ORDER BY sub.core DESC, sub."nWpm" DESC, sub.accuracy DESC, sub."durationSec" ASC
             LIMIT 100
         `, [snippetId, start, end]);
     }
