@@ -343,18 +343,19 @@ export class SnippetResultRepository {
     }
 
     // 현재 연속 제출 일수 — 오늘 제출 시 오늘 기준, 아니면 어제 기준
+    // getStreakDayData와 동일하게 "createdAt"::date (세션 타임존) 기준 사용
     async getCurrentStreak(userId: number): Promise<number> {
         const rows: { current_streak: string }[] = await this.repo.query(`
             WITH daily AS (
-                SELECT DISTINCT ("createdAt" AT TIME ZONE 'UTC')::date AS day
+                SELECT DISTINCT "createdAt"::date AS day
                 FROM snippet_result
                 WHERE "userId" = $1
             ),
             base AS (
                 SELECT CASE
-                    WHEN EXISTS (SELECT 1 FROM daily WHERE day = (NOW() AT TIME ZONE 'UTC')::date)
-                    THEN (NOW() AT TIME ZONE 'UTC')::date
-                    ELSE (NOW() AT TIME ZONE 'UTC')::date - 1
+                    WHEN EXISTS (SELECT 1 FROM daily WHERE day = CURRENT_DATE)
+                    THEN CURRENT_DATE
+                    ELSE CURRENT_DATE - 1
                 END AS base_day
             ),
             numbered AS (
