@@ -342,6 +342,15 @@ export class SnippetResultRepository {
         return Number(rows[0]?.total_core ?? 0);
     }
 
+    async getAvgWpm(userId: number): Promise<number> {
+        const rows: { avg_wpm: string }[] = await this.repo.query(`
+            SELECT ROUND(AVG(wpm)::numeric, 1) AS avg_wpm
+            FROM snippet_result
+            WHERE "userId" = $1
+        `, [userId]);
+        return Number(rows[0]?.avg_wpm ?? 0);
+    }
+
     // 현재 연속 제출 일수 — 오늘 제출 시 오늘 기준, 아니면 어제 기준
     // getStreakDayData와 동일하게 "createdAt"::date (세션 타임존) 기준 사용
     async getCurrentStreak(userId: number): Promise<number> {

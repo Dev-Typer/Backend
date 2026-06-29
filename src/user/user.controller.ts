@@ -1,9 +1,10 @@
-import { Controller, Delete, Get, HttpStatus, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Controller, Delete, Get, HttpStatus, Param, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { ApiResponse } from "src/common/dto/api-response";
 import type { JwtUser } from "src/common/types/jwt-user.type";
 import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
+import type { UserHoverDto } from "./dto/user-hover.dto";
 import type { UserCoreDto } from "./dto/user-core.dto";
 import type { UserCoreByLanguageDto } from "./dto/user-core-by-language.dto";
 import type { UserCoreHistoryDto } from "./dto/user-core-history.dto";
@@ -118,6 +119,14 @@ export class UserController {
     @UseGuards(JwtAuthGuard)
     async getMyCoreHistory(@CurrentUser() user: JwtUser): Promise<ApiResponse<UserCoreHistoryDto>> {
         const response = await this.userService.getMyCoreHistory(user.userId);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    // ─── 공개 호버 카드 (/me 라우트 이후 위치 — NestJS 정적 경로 우선 규칙) ──────
+
+    @Get(':username/hover')
+    async getHoverCard(@Param('username') username: string): Promise<ApiResponse<UserHoverDto>> {
+        const response = await this.userService.getHoverCard(username);
         return ApiResponse.success(response, HttpStatus.OK);
     }
 }

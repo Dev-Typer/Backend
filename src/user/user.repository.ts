@@ -36,4 +36,25 @@ export class UserRepository {
     async updateBannerUrl(userId: number, bannerUrl: string | null): Promise<void> {
         await this.repo.update(userId, { bannerUrl });
     }
+
+    async findByUsername(username: string): Promise<User | null> {
+        return this.repo.findOne({ where: { username } });
+    }
+
+    async getGlobalRank(totalCore: number): Promise<number> {
+        const rows: { rank: string }[] = await this.repo.query(`
+            SELECT COUNT(*) + 1 AS rank
+            FROM (
+                SELECT "userId", SUM(best_core) AS user_total
+                FROM (
+                    SELECT "userId", "snippetId", MAX(core) AS best_core
+                    FROM snippet_result
+                    GROUP BY "userId", "snippetId"
+                ) sub
+                GROUP BY "userId"
+            ) totals
+            WHERE user_total > $1
+        `, [totalCore]);
+        return Number(rows[0]?.rank ?? 1);
+    }
 }
