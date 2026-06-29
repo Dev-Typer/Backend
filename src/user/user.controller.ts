@@ -4,6 +4,7 @@ import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { ApiResponse } from "src/common/dto/api-response";
 import type { JwtUser } from "src/common/types/jwt-user.type";
 import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
+import type { UserHoverDto } from "./dto/user-hover.dto";
 import type { UserCoreDto } from "./dto/user-core.dto";
 import type { UserCoreByLanguageDto } from "./dto/user-core-by-language.dto";
 import type { UserCoreHistoryDto } from "./dto/user-core-history.dto";
@@ -121,11 +122,11 @@ export class UserController {
         return ApiResponse.success(response, HttpStatus.OK);
     }
 
-    // ─── 공개 프로필 (username 기준) ──────────────────────────────────────────────
+    // ─── 공개 API (인증 불필요 — /me 라우트 이후, :username 와일드카드 이전) ────────
 
-    @Get(':username')
-    async getPublicProfile(@Param('username') username: string): Promise<ApiResponse<UserMeResponseDto>> {
-        const response = await this.userService.getPublicProfile(username);
+    @Get(':username/hover')
+    async getHoverCard(@Param('username') username: string): Promise<ApiResponse<UserHoverDto>> {
+        const response = await this.userService.getHoverCard(username);
         return ApiResponse.success(response, HttpStatus.OK);
     }
 
@@ -145,12 +146,6 @@ export class UserController {
         return ApiResponse.success(response, HttpStatus.OK);
     }
 
-    @Get(':username/core')
-    async getPublicCoreInfo(@Param('username') username: string): Promise<ApiResponse<UserCoreDto>> {
-        const response = await this.userService.getPublicCoreInfo(username);
-        return ApiResponse.success(response, HttpStatus.OK);
-    }
-
     @Get(':username/core/by-language')
     async getPublicCoreByLanguage(@Param('username') username: string): Promise<ApiResponse<UserCoreByLanguageDto>> {
         const response = await this.userService.getPublicCoreByLanguage(username);
@@ -160,6 +155,18 @@ export class UserController {
     @Get(':username/core/history')
     async getPublicCoreHistory(@Param('username') username: string): Promise<ApiResponse<UserCoreHistoryDto>> {
         const response = await this.userService.getPublicCoreHistory(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/core')
+    async getPublicCoreInfo(@Param('username') username: string): Promise<ApiResponse<UserCoreDto>> {
+        const response = await this.userService.getPublicCoreInfo(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username')
+    async getPublicProfile(@Param('username') username: string): Promise<ApiResponse<UserMeResponseDto>> {
+        const response = await this.userService.getPublicProfile(username);
         return ApiResponse.success(response, HttpStatus.OK);
     }
 }

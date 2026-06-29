@@ -3,6 +3,7 @@ import { UserCoreDto, UserSnippetInfo } from './dto/user-core.dto';
 import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-language.dto';
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
 import { UserMeResponseDto } from './dto/user-me-response.dto';
+import { UserHoverDto } from './dto/user-hover.dto';
 import type { UserStreakDto, StreakDayEntry } from './dto/user-streak.dto';
 import type { UserWpmHistoryDto } from './dto/user-wpm-history.dto';
 import { CurrentStreakResponseDto } from './dto/current-streak-response.dto';
@@ -32,6 +33,17 @@ export class UserService {
         ]);
         if (!user) throw new BusinessException(UserError.NOT_FOUND);
         return UserMeResponseDto.from(user, totalCore, currentStreak);
+    }
+
+    async getHoverCard(username: string): Promise<UserHoverDto> {
+        const user = await this.userRepository.findByUsername(username);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+        const [totalCore, currentStreak] = await Promise.all([
+            this.snippetResultRepository.getTotalCore(user.id),
+            this.fetchCurrentStreak(user.id),
+        ]);
+        const globalRank = await this.userRepository.getGlobalRank(totalCore);
+        return UserHoverDto.from(user, totalCore, currentStreak, globalRank);
     }
 
     // ─── 이미지 업로드/삭제 ────────────────────────────────────────────────────
