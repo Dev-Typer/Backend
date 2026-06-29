@@ -173,6 +173,44 @@ export class UserService {
         return { userId, range: `${MONTHS}m`, results };
     }
 
+    // ─── 공개 프로필 (username 기준) ──────────────────────────────────────────────
+
+    private async resolveUserId(username: string): Promise<number> {
+        const user = await this.userRepository.findByUsername(username);
+        if (!user) throw new BusinessException(UserError.NOT_FOUND);
+        return user.id;
+    }
+
+    async getPublicProfile(username: string): Promise<UserMeResponseDto> {
+        const userId = await this.resolveUserId(username);
+        return this.getUserMe(userId);
+    }
+
+    async getPublicStreak(username: string, year?: number, type?: string): Promise<UserStreakDto> {
+        const userId = await this.resolveUserId(username);
+        return this.getMeStreak(userId, year, type);
+    }
+
+    async getPublicWpmHistory(username: string): Promise<UserWpmHistoryDto> {
+        const userId = await this.resolveUserId(username);
+        return this.getMeWpmHistory(userId);
+    }
+
+    async getPublicCoreInfo(username: string): Promise<UserCoreDto> {
+        const userId = await this.resolveUserId(username);
+        return this.getMyCoreInfo(userId);
+    }
+
+    async getPublicCoreByLanguage(username: string): Promise<UserCoreByLanguageDto> {
+        const userId = await this.resolveUserId(username);
+        return this.getMyCoreByLanguage(userId);
+    }
+
+    async getPublicCoreHistory(username: string): Promise<UserCoreHistoryDto> {
+        const userId = await this.resolveUserId(username);
+        return this.getMyCoreHistory(userId);
+    }
+
     // ─── CORE ─────────────────────────────────────────────────────────────────
 
     async getMyCoreInfo(userId: number): Promise<UserCoreDto> {
