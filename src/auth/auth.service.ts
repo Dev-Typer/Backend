@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { BusinessException } from '../common/exceptions/business.exception';
 import { AuthError } from '../common/exceptions/error-code';
 import { UserRepository } from 'src/user/user.repository';
@@ -13,6 +14,9 @@ import jwtConfig from '../config/jwt.config';
 
 @Injectable()
 export class AuthService {
+    // ⚠️ 단일 인스턴스 한정 — 수평 스케일아웃 시 Redis로 교체 필요
+    private readonly oauthCodes = new Map<string, { accessToken: string; expiresAt: number }>();
+
     constructor(
         private userRepository: UserRepository,
         private jwtService: JwtService,
@@ -21,6 +25,19 @@ export class AuthService {
         @Inject(jwtConfig.KEY)
         private readonly jwtConf: ConfigType<typeof jwtConfig>,
     ) {}
+
+    generateOAuthCode(accessToken: string): string {
+        const code = randomUUID();
+        this.oauthCodes.set(code, { accessToken, expiresAt: Date.now() + 30_000 });
+        return code;
+    }
+
+    consumeOAuthCode(code: string): string | null {
+        const entry = this.oauthCodes.get(code);
+        this.oauthCodes.delete(code);
+        if (!entry || entry.expiresAt < Date.now()) return null;
+        return entry.accessToken;
+    }
 
     async getAuthMe(userId: number): Promise<AuthMeResponseDto> {
         const user = await this.userRepository.findById(userId);
