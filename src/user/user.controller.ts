@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, HttpStatus, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Controller, Delete, Get, HttpStatus, Param, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { ApiResponse } from "src/common/dto/api-response";
@@ -118,6 +118,48 @@ export class UserController {
     @UseGuards(JwtAuthGuard)
     async getMyCoreHistory(@CurrentUser() user: JwtUser): Promise<ApiResponse<UserCoreHistoryDto>> {
         const response = await this.userService.getMyCoreHistory(user.userId);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    // ─── 공개 프로필 (username 기준) ──────────────────────────────────────────────
+
+    @Get(':username')
+    async getPublicProfile(@Param('username') username: string): Promise<ApiResponse<UserMeResponseDto>> {
+        const response = await this.userService.getPublicProfile(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/streak')
+    async getPublicStreak(
+        @Param('username') username: string,
+        @Query('year') year?: string,
+        @Query('type') type?: string,
+    ): Promise<ApiResponse<UserStreakDto>> {
+        const response = await this.userService.getPublicStreak(username, year ? Number(year) : undefined, type);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/wpm/history')
+    async getPublicWpmHistory(@Param('username') username: string): Promise<ApiResponse<UserWpmHistoryDto>> {
+        const response = await this.userService.getPublicWpmHistory(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/core')
+    async getPublicCoreInfo(@Param('username') username: string): Promise<ApiResponse<UserCoreDto>> {
+        const response = await this.userService.getPublicCoreInfo(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/core/by-language')
+    async getPublicCoreByLanguage(@Param('username') username: string): Promise<ApiResponse<UserCoreByLanguageDto>> {
+        const response = await this.userService.getPublicCoreByLanguage(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/core/history')
+    async getPublicCoreHistory(@Param('username') username: string): Promise<ApiResponse<UserCoreHistoryDto>> {
+        const response = await this.userService.getPublicCoreHistory(username);
         return ApiResponse.success(response, HttpStatus.OK);
     }
 }
