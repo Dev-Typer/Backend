@@ -32,6 +32,11 @@ export const AuthError = {
     statusCode: HttpStatus.UNAUTHORIZED,
     message: '존재하지 않는 유저입니다',
   },
+  INVALID_OAUTH_CODE: {
+    code: 'AUTH_006',
+    statusCode: HttpStatus.BAD_REQUEST,
+    message: '유효하지 않거나 만료된 OAuth 코드입니다',
+  },
 } as const satisfies Record<string, ErrorCode>;
 
 export const SnippetError = {

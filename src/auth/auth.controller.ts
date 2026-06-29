@@ -1,4 +1,4 @@
-﻿import { Controller, Get, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtUser } from '../common/types/jwt-user.type';
 import type { ConfigType } from '@nestjs/config';
@@ -12,6 +12,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { User } from '../user/user.entity';
 import { ApiResponse } from '../common/dto/api-response';
 import type { AuthMeResponseDto } from './dto/auth-me-response.dto';
+import { TokenExchangeRequestDto } from './dto/token-exchange-request.dto';
 import jwtConfig from '../config/jwt.config';
 
 @Controller('/api/auth')
@@ -50,39 +51,38 @@ export class AuthController {
       sameSite: 'lax',
       maxAge: this.jwtConf.refreshExpiresSeconds * 1000,
     });
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: this.jwtConf.accessExpiresSeconds * 1000,
-    });
 
-    res.redirect(frontendUrl);
+    const code = this.authService.generateOAuthCode(accessToken);
+    res.redirect(`${frontendUrl}/?code=${code}`);
+  }
+
+  @Post('/token-exchange')
+  async tokenExchange(
+    @Body() dto: TokenExchangeRequestDto,
+  ): Promise<ApiResponse<{ accessToken: string }>> {
+    const accessToken = this.authService.consumeOAuthCode(dto.code);
+    if (!accessToken) throw new BusinessException(AuthError.INVALID_OAUTH_CODE);
+    return ApiResponse.success({ accessToken }, HttpStatus.OK);
   }
 
   @Post('/refresh')
   async refresh(
     @Req() req: Request & { cookies: Record<string, string> },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<void> {
+  ): Promise<ApiResponse<{ accessToken: string }>> {
     const token = req.cookies['refreshToken'];
     if (!token) throw new BusinessException(AuthError.MISSING_REFRESH_TOKEN);
 
     const { accessToken, refreshToken: newRefreshToken } = await this.authService.refresh(token);
 
-    const isSecure = process.env.NODE_ENV === 'production';
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: isSecure,
-      sameSite: 'lax',
-      maxAge: this.jwtConf.accessExpiresSeconds * 1000,
-    });
     res.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
-      secure: isSecure,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: this.jwtConf.refreshExpiresSeconds * 1000,
     });
+
+    return ApiResponse.success({ accessToken }, HttpStatus.OK);
   }
 
   @Post('/logout')
@@ -95,13 +95,11 @@ export class AuthController {
     const token = req.cookies['refreshToken'];
     if (token) await this.authService.logout(token, user.userId);
 
-    const cookieOptions = {
+    res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-    };
-    res.clearCookie('accessToken', cookieOptions);
-    res.clearCookie('refreshToken', cookieOptions);
+      sameSite: 'lax',
+    });
   }
 
 }
