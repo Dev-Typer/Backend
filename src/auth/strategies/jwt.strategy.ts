@@ -6,7 +6,6 @@ import { JwtPayload } from '../types/jwt-payload.interface';
 import { UserRepository } from '../../user/user.repository';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { AuthError } from '../../common/exceptions/error-code';
-import type { Request } from 'express';
 import { JwtUser } from '../../common/types/jwt-user.type';
 
 @Injectable()
@@ -16,9 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         private userRepository: UserRepository,
     ) {
         super({
-            jwtFromRequest: ExtractJwt.fromExtractors([
-                (req: Request) => req?.cookies?.accessToken ?? null,
-            ]),
+            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             secretOrKey: config.get<string>('JWT_SECRET')!,
         });
     }
