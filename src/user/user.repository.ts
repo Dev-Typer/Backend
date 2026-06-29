@@ -19,6 +19,10 @@ export class UserRepository {
         return this.repo.findOne({ where: { id } });
     }
 
+    async findByUsername(username: string): Promise<User | null> {
+        return this.repo.findOne({ where: { username } });
+    }
+
     async create(profile: GithubProfileDto): Promise<User> {
         const user = this.repo.create({
             githubId:   profile.githubId,
@@ -35,10 +39,6 @@ export class UserRepository {
 
     async updateBannerUrl(userId: number, bannerUrl: string | null): Promise<void> {
         await this.repo.update(userId, { bannerUrl });
-    }
-
-    async findByUsername(username: string): Promise<User | null> {
-        return this.repo.findOne({ where: { username } });
     }
 
     async getGlobalRank(totalCore: number): Promise<number> {

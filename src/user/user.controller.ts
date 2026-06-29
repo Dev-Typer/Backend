@@ -122,11 +122,51 @@ export class UserController {
         return ApiResponse.success(response, HttpStatus.OK);
     }
 
-    // ─── 공개 호버 카드 (/me 라우트 이후 위치 — NestJS 정적 경로 우선 규칙) ──────
+    // ─── 공개 API (인증 불필요 — /me 라우트 이후, :username 와일드카드 이전) ────────
 
     @Get(':username/hover')
     async getHoverCard(@Param('username') username: string): Promise<ApiResponse<UserHoverDto>> {
         const response = await this.userService.getHoverCard(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/streak')
+    async getPublicStreak(
+        @Param('username') username: string,
+        @Query('year') year?: string,
+        @Query('type') type?: string,
+    ): Promise<ApiResponse<UserStreakDto>> {
+        const response = await this.userService.getPublicStreak(username, year ? Number(year) : undefined, type);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/wpm/history')
+    async getPublicWpmHistory(@Param('username') username: string): Promise<ApiResponse<UserWpmHistoryDto>> {
+        const response = await this.userService.getPublicWpmHistory(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/core/by-language')
+    async getPublicCoreByLanguage(@Param('username') username: string): Promise<ApiResponse<UserCoreByLanguageDto>> {
+        const response = await this.userService.getPublicCoreByLanguage(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/core/history')
+    async getPublicCoreHistory(@Param('username') username: string): Promise<ApiResponse<UserCoreHistoryDto>> {
+        const response = await this.userService.getPublicCoreHistory(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/core')
+    async getPublicCoreInfo(@Param('username') username: string): Promise<ApiResponse<UserCoreDto>> {
+        const response = await this.userService.getPublicCoreInfo(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username')
+    async getPublicProfile(@Param('username') username: string): Promise<ApiResponse<UserMeResponseDto>> {
+        const response = await this.userService.getPublicProfile(username);
         return ApiResponse.success(response, HttpStatus.OK);
     }
 }
