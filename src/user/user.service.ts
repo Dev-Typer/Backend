@@ -38,13 +38,12 @@ export class UserService {
     async getHoverCard(username: string): Promise<UserHoverDto> {
         const user = await this.userRepository.findByUsername(username);
         if (!user) throw new BusinessException(UserError.NOT_FOUND);
-        const [totalCore, currentStreak, avgWpm] = await Promise.all([
+        const [totalCore, currentStreak] = await Promise.all([
             this.snippetResultRepository.getTotalCore(user.id),
             this.fetchCurrentStreak(user.id),
-            this.snippetResultRepository.getAvgWpm(user.id),
         ]);
         const globalRank = await this.userRepository.getGlobalRank(totalCore);
-        return UserHoverDto.from(user, totalCore, avgWpm, currentStreak, globalRank);
+        return UserHoverDto.from(user, totalCore, currentStreak, globalRank);
     }
 
     // ─── 이미지 업로드/삭제 ────────────────────────────────────────────────────
