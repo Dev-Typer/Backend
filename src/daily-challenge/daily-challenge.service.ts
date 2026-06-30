@@ -17,6 +17,7 @@ import {
 import { BusinessException } from '../common/exceptions/business.exception';
 import { DailyError } from '../common/exceptions/error-code';
 import { DailyChallenge } from './entities/daily-challenge.entity';
+import { BadgeService } from '../badge/badge.service';
 
 @Injectable()
 export class DailyChallengeService {
@@ -24,6 +25,7 @@ export class DailyChallengeService {
         private readonly dailyChallengeRepository: DailyChallengeRepository,
         private readonly snippetRepository: SnippetRepository,
         private readonly snippetResultRepository: SnippetResultRepository,
+        private readonly badgeService: BadgeService,
     ) {}
 
     async getDailyChallenge(): Promise<DailyChallengeResponseDto> {
@@ -70,6 +72,7 @@ export class DailyChallengeService {
             isDaily: true,
         });
         await this.snippetRepository.incrementStats(challenge.snippetId, dto.wpm);
+        await this.badgeService.awardLanguageBadge(userId, challenge.snippet.language);
 
         const afterRankInfo = await this.snippetResultRepository.findUserRankInfo(
             challenge.snippetId, userId, start, end,

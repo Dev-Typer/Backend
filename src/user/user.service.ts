@@ -4,6 +4,8 @@ import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-languag
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
 import { UserMeResponseDto } from './dto/user-me-response.dto';
 import { UserHoverDto } from './dto/user-hover.dto';
+import { UserBadgeListResponseDto } from '../badge/dto/user-badge-response.dto';
+import { BadgeService } from '../badge/badge.service';
 import type { UserStreakDto, StreakDayEntry } from './dto/user-streak.dto';
 import type { UserWpmHistoryDto } from './dto/user-wpm-history.dto';
 import { CurrentStreakResponseDto } from './dto/current-streak-response.dto';
@@ -21,6 +23,7 @@ export class UserService {
         private readonly snippetResultRepository: SnippetResultRepository,
         private readonly userRepository: UserRepository,
         private readonly r2: R2StorageService,
+        private readonly badgeService: BadgeService,
     ) {}
 
     // ─── 프로필 조회 ───────────────────────────────────────────────────────────
@@ -221,6 +224,17 @@ export class UserService {
     async getPublicCoreHistory(username: string): Promise<UserCoreHistoryDto> {
         const userId = await this.resolveUserId(username);
         return this.getMyCoreHistory(userId);
+    }
+
+    // ─── 뱃지 ─────────────────────────────────────────────────────────────────
+
+    async getMyBadges(userId: number): Promise<UserBadgeListResponseDto> {
+        return this.badgeService.getUserBadges(userId);
+    }
+
+    async getPublicBadges(username: string): Promise<UserBadgeListResponseDto> {
+        const userId = await this.resolveUserId(username);
+        return this.badgeService.getUserBadges(userId);
     }
 
     // ─── CORE ─────────────────────────────────────────────────────────────────
