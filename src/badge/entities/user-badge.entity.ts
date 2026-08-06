@@ -22,4 +22,10 @@ export class UserBadge {
 
     @CreateDateColumn()
     earnedAt!: Date;
+
+    @Column({ default: false })
+    isFeatured!: boolean;
+
+    @Column({ type: 'int', nullable: true })
+    featuredOrder!: number | null;
 }
