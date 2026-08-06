@@ -110,3 +110,21 @@ export const DailyError = {
     message: '오늘의 챌린지가 존재하지 않습니다',
   },
 } as const satisfies Record<string, ErrorCode>;
+
+export const BadgeError = {
+  DISPLAY_LIMIT_EXCEEDED: {
+    code: 'BADGE_001',
+    statusCode: HttpStatus.BAD_REQUEST,
+    message: '표시 뱃지는 최대 8개까지 선택 가능합니다.',
+  },
+  NOT_OWNED: {
+    code: 'BADGE_002',
+    statusCode: HttpStatus.BAD_REQUEST,
+    message: '보유하지 않은 뱃지입니다.',
+  },
+  DUPLICATE_CODE: {
+    code: 'BADGE_003',
+    statusCode: HttpStatus.BAD_REQUEST,
+    message: '중복된 뱃지 코드가 있습니다.',
+  },
+} as const satisfies Record<string, ErrorCode>;
