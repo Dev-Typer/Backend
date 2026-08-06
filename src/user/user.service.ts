@@ -4,7 +4,8 @@ import { UserCoreByLanguageDto, LangCoreEntry } from './dto/user-core-by-languag
 import type { UserCoreHistoryDto, CoreHistoryPoint } from './dto/user-core-history.dto';
 import { UserMeResponseDto } from './dto/user-me-response.dto';
 import { UserHoverDto } from './dto/user-hover.dto';
-import { UserBadgeListResponseDto } from '../badge/dto/user-badge-response.dto';
+import { UserBadgeListResponseDto, PublicBadgeListResponseDto } from '../badge/dto/user-badge-response.dto';
+import { UpdateFeaturedBadgesDto } from '../badge/dto/update-featured-badges.dto';
 import { BadgeService } from '../badge/badge.service';
 import type { UserStreakDto, StreakDayEntry } from './dto/user-streak.dto';
 import type { UserWpmHistoryDto } from './dto/user-wpm-history.dto';
@@ -232,9 +233,13 @@ export class UserService {
         return this.badgeService.getUserBadges(userId);
     }
 
-    async getPublicBadges(username: string): Promise<UserBadgeListResponseDto> {
+    async updateFeaturedBadges(userId: number, dto: UpdateFeaturedBadgesDto): Promise<void> {
+        await this.badgeService.updateFeaturedBadges(userId, dto.badgeCodes);
+    }
+
+    async getPublicBadges(username: string): Promise<PublicBadgeListResponseDto> {
         const userId = await this.resolveUserId(username);
-        return this.badgeService.getUserBadges(userId);
+        return this.badgeService.getFeaturedBadges(userId);
     }
 
     // ─── CORE ─────────────────────────────────────────────────────────────────
