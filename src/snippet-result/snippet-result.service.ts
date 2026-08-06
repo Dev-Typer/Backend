@@ -11,12 +11,14 @@ import { BusinessException } from '../common/exceptions/business.exception';
 import { SnippetError, ResultError } from '../common/exceptions/error-code';
 import { SnippetResult } from './entities/snippet-result.entity';
 import { calculateCore, calculateRawCore, calculateNWpm } from '../common/utils/core-calculator.util';
+import { BadgeService } from '../badge/badge.service';
 
 @Injectable()
 export class SnippetResultService {
   constructor(
     private readonly snippetResultRepository: SnippetResultRepository,
     private readonly snippetRepository: SnippetRepository,
+    private readonly badgeService: BadgeService,
   ) {}
 
   @Transactional()
@@ -62,6 +64,7 @@ export class SnippetResultService {
       replayData: dto.replayData ?? [],
     });
     await this.snippetRepository.incrementStats(dto.snippetId, dto.wpm);
+    await this.badgeService.awardLanguageBadge(userId, snippet.language);
 
     return SnippetResultResponseDto.from(saved, prevBestCore);
   }

@@ -6,11 +6,13 @@ import { SnippetResultController } from './snippet-result.controller';
 import { SnippetRankingController } from './snippet-ranking.controller';
 import { SnippetModule } from '../snippet/snippet.module';
 import { SnippetResultRepository } from './snippet-result.repository';
+import { BadgeModule } from '../badge/badge.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([SnippetResult]),
         SnippetModule,
+        BadgeModule,
     ],
     controllers: [SnippetResultController, SnippetRankingController],
     providers: [SnippetResultService, SnippetResultRepository],

@@ -5,6 +5,7 @@ import { ApiResponse } from "src/common/dto/api-response";
 import type { JwtUser } from "src/common/types/jwt-user.type";
 import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
 import type { UserHoverDto } from "./dto/user-hover.dto";
+import type { UserBadgeListResponseDto } from "../badge/dto/user-badge-response.dto";
 import type { UserCoreDto } from "./dto/user-core.dto";
 import type { UserCoreByLanguageDto } from "./dto/user-core-by-language.dto";
 import type { UserCoreHistoryDto } from "./dto/user-core-history.dto";
@@ -122,6 +123,13 @@ export class UserController {
         return ApiResponse.success(response, HttpStatus.OK);
     }
 
+    @Get('/me/badges')
+    @UseGuards(JwtAuthGuard)
+    async getMyBadges(@CurrentUser() user: JwtUser): Promise<ApiResponse<UserBadgeListResponseDto>> {
+        const response = await this.userService.getMyBadges(user.userId);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
     // ─── 공개 API (인증 불필요 — /me 라우트 이후, :username 와일드카드 이전) ────────
 
     @Get(':username/hover')
@@ -161,6 +169,12 @@ export class UserController {
     @Get(':username/core')
     async getPublicCoreInfo(@Param('username') username: string): Promise<ApiResponse<UserCoreDto>> {
         const response = await this.userService.getPublicCoreInfo(username);
+        return ApiResponse.success(response, HttpStatus.OK);
+    }
+
+    @Get(':username/badges')
+    async getPublicBadges(@Param('username') username: string): Promise<ApiResponse<UserBadgeListResponseDto>> {
+        const response = await this.userService.getPublicBadges(username);
         return ApiResponse.success(response, HttpStatus.OK);
     }
 
